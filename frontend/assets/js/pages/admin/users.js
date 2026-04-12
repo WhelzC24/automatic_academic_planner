@@ -1,6 +1,7 @@
 const API = BASE_URL + '/backend/admin/admin_api.php';
 const CURRENT_USER_ID = window.CURRENT_USER_ID || 0;
 let currentRole = '';
+let pendingReset = null;
 
 function setRole(role, btn) {
   currentRole = role;
@@ -149,15 +150,35 @@ async function resetPassword(id, name, role) {
     toast('Only student and instructor accounts can be reset.', 'error');
     return;
   }
-  if (!confirm(`Reset password for \"${name}\" to default \"12345\"?`)) return;
+
+  pendingReset = { id, name, role };
+  document.getElementById('reset-user-name').textContent = name;
+  document.getElementById('reset-password-modal').classList.add('show');
+}
+
+function closeResetModal() {
+  pendingReset = null;
+  document.getElementById('reset-password-modal').classList.remove('show');
+}
+
+async function confirmResetPassword() {
+  if (!pendingReset) return;
 
   const fd = new FormData();
   fd.append('action', 'reset_user_password');
-  fd.append('user_id', id);
+  fd.append('user_id', pendingReset.id);
+
+  const btn = document.getElementById('confirm-reset-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
 
   const res = await fetch(API, { method: 'POST', body: fd });
   const data = await res.json();
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-key"></i> Reset Password';
+
   if (data.success) {
+    closeResetModal();
     toast(data.message);
     loadUsers();
   } else {
