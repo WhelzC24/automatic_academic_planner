@@ -1,0 +1,111 @@
+.admin-dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.admin-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-quick-actions .btn {
+  justify-content: flex-start;
+}
+
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--slate);
+}
+
+.snapshot-row:last-child {
+  border-bottom: none;
+}
+
+.snapshot-row strong {
+  font-size: 1rem;
+  color: var(--navy);
+}
+
+#recent-logs .recent-logs-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#recent-logs .recent-logs-table th,
+#recent-logs .recent-logs-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+#recent-logs .recent-logs-table .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  #recent-logs .recent-logs-table thead {
+    display: none;
+  }
+
+  #recent-logs .recent-logs-table,
+  #recent-logs .recent-logs-table tbody,
+  #recent-logs .recent-logs-table tr,
+  #recent-logs .recent-logs-table td {
+    display: block;
+    width: 100%;
+  }
+
+  #recent-logs .recent-logs-table tr {
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 0.9rem;
+  }
+
+  #recent-logs .recent-logs-table td {
+    position: relative;
+    border-bottom: none;
+    padding: 0.28rem 0 0.28rem 7.2rem;
+    font-size: 0.82rem;
+  }
+
+  #recent-logs .recent-logs-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 0.28rem;
+    width: 6.8rem;
+    color: var(--slate);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  #recent-logs .recent-logs-table td[data-label='Description'] {
+    padding-left: 0;
+    margin-top: 0.2rem;
+  }
+
+  #recent-logs .recent-logs-table td[data-label='Description']::before {
+    position: static;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .admin-dash-grid {
+    grid-template-columns: 1fr;
+  }
+}

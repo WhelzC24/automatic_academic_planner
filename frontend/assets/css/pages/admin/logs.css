@@ -1,0 +1,112 @@
+.admin-logs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.snapshot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--slate);
+  font-size: 0.88rem;
+}
+
+.snapshot-row:last-child {
+  border-bottom: none;
+}
+
+.snapshot-row strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.admin-logs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-logs-actions .btn {
+  justify-content: flex-start;
+}
+
+#logs-list .logs-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#logs-list .logs-table td,
+#logs-list .logs-table th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+#logs-list .logs-table .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  #logs-list .logs-table thead {
+    display: none;
+  }
+
+  #logs-list .logs-table,
+  #logs-list .logs-table tbody,
+  #logs-list .logs-table tr,
+  #logs-list .logs-table td {
+    display: block;
+    width: 100%;
+  }
+
+  #logs-list .logs-table tr {
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 0.9rem;
+  }
+
+  #logs-list .logs-table td {
+    position: relative;
+    border-bottom: none;
+    padding: 0.28rem 0 0.28rem 7.2rem;
+    font-size: 0.82rem;
+    white-space: normal;
+  }
+
+  #logs-list .logs-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 0.28rem;
+    width: 6.8rem;
+    color: var(--slate);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  #logs-list .logs-table td[data-label='Description'] {
+    margin-top: 0.2rem;
+    padding-left: 0;
+  }
+
+  #logs-list .logs-table td[data-label='Description']::before {
+    position: static;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .admin-logs-grid {
+    grid-template-columns: 1fr;
+  }
+}

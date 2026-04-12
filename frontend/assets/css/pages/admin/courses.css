@@ -1,0 +1,112 @@
+.admin-courses-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.snapshot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--slate);
+  font-size: 0.88rem;
+}
+
+.snapshot-row:last-child {
+  border-bottom: none;
+}
+
+.snapshot-row strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.admin-courses-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-courses-actions .btn {
+  justify-content: flex-start;
+}
+
+#courses-list .courses-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#courses-list .courses-table th,
+#courses-list .courses-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+#courses-list .courses-table .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  #courses-list .courses-table thead {
+    display: none;
+  }
+
+  #courses-list .courses-table,
+  #courses-list .courses-table tbody,
+  #courses-list .courses-table tr,
+  #courses-list .courses-table td {
+    display: block;
+    width: 100%;
+  }
+
+  #courses-list .courses-table tr {
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 0.9rem;
+  }
+
+  #courses-list .courses-table td {
+    position: relative;
+    border-bottom: none;
+    padding: 0.28rem 0 0.28rem 7.2rem;
+    font-size: 0.82rem;
+    text-align: left !important;
+  }
+
+  #courses-list .courses-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 0.28rem;
+    width: 6.8rem;
+    color: var(--slate);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  #courses-list .courses-table td[data-label='Description'] {
+    margin-top: 0.2rem;
+    padding-left: 0;
+  }
+
+  #courses-list .courses-table td[data-label='Description']::before {
+    position: static;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .admin-courses-grid {
+    grid-template-columns: 1fr;
+  }
+}

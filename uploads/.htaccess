@@ -1,0 +1,11 @@
+# Block direct PHP execution in uploads
+<FilesMatch "\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow only specific file types
+<FilesMatch "\.(pdf|doc|docx|txt|zip|png|jpg|jpeg)$">
+    Order deny,allow
+    Allow from all
+</FilesMatch>
