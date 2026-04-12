@@ -121,6 +121,29 @@ layout_header('User Management', 'admin');
   </div>
 </div>
 
+<div class="modal-overlay" id="reset-password-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fas fa-key"></i> Confirm Password Reset</div>
+      <button class="modal-close" onclick="closeResetModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--slate);font-size:.9rem;line-height:1.5;margin:0;">
+        Reset password for <strong id="reset-user-name">this user</strong> to default <strong>12345</strong>?
+      </p>
+      <p style="color:var(--slate);font-size:.82rem;line-height:1.5;margin-top:.85rem;">
+        The user will be required to change password on next login.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeResetModal()">Cancel</button>
+      <button class="btn btn-primary" id="confirm-reset-btn" onclick="confirmResetPassword()">
+        <i class="fas fa-key"></i> Reset Password
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 window.CURRENT_USER_ID = <?= (int)($_SESSION['user_id'] ?? 0) ?>;
 </script>
