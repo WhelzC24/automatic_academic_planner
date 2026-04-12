@@ -71,7 +71,6 @@ switch ($action) {
             'last_name'      => trim($_POST['last_name'] ?? ''),
             'username'       => trim($_POST['username'] ?? ''),
             'email'          => trim($_POST['email'] ?? ''),
-            'password'       => $_POST['password'] ?? 'BISU@2024',
             'phone'          => trim($_POST['phone'] ?? ''),
             'student_number' => trim($_POST['student_number'] ?? ''),
             'program'        => trim($_POST['program'] ?? ''),
@@ -80,12 +79,13 @@ switch ($action) {
         if (!$data['username'] || !$data['email'] || !$data['student_number']) {
             jsonResponse(false, 'Required fields missing.');
         }
-        $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost'=>12]);
+        $defaultPassword = '12345';
+        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost'=>12]);
         $db->beginTransaction();
         try {
             $ins = $db->prepare(
-                "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role)
-                 VALUES (:u,:e,:h,:fn,:ln,:ph,'student')"
+                "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role,must_change_password)
+                 VALUES (:u,:e,:h,:fn,:ln,:ph,'student',1)"
             );
             $ins->execute([':u'=>$data['username'],':e'=>$data['email'],':h'=>$hash,
                            ':fn'=>$data['first_name'],':ln'=>$data['last_name'],':ph'=>$data['phone']]);
@@ -94,7 +94,7 @@ switch ($action) {
                ->execute([':id'=>$newId,':sn'=>$data['student_number'],':pr'=>$data['program'],':yr'=>$data['year_level']]);
             $db->commit();
             logAction('ADD_STUDENT', "Added student {$data['username']}");
-            jsonResponse(true, 'Student account created.', ['user_id'=>$newId]);
+            jsonResponse(true, 'Student account created. Default password is 12345 and must be changed on first login.', ['user_id'=>$newId]);
         } catch(Exception $e) {
             $db->rollBack();
             jsonResponse(false, 'Failed to create student. Username or email may already exist.');
@@ -107,18 +107,18 @@ switch ($action) {
             'last_name'      => trim($_POST['last_name'] ?? ''),
             'username'       => trim($_POST['username'] ?? ''),
             'email'          => trim($_POST['email'] ?? ''),
-            'password'       => $_POST['password'] ?? 'BISU@2024',
             'phone'          => trim($_POST['phone'] ?? ''),
             'department'     => trim($_POST['department'] ?? ''),
             'designation'    => trim($_POST['designation'] ?? ''),
             'office_location'=> trim($_POST['office_location'] ?? ''),
         ];
-        $hash = password_hash($data['password'], PASSWORD_BCRYPT, ['cost'=>12]);
+        $defaultPassword = '12345';
+        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost'=>12]);
         $db->beginTransaction();
         try {
             $ins = $db->prepare(
-                "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role)
-                 VALUES (:u,:e,:h,:fn,:ln,:ph,'instructor')"
+                "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role,must_change_password)
+                 VALUES (:u,:e,:h,:fn,:ln,:ph,'instructor',1)"
             );
             $ins->execute([':u'=>$data['username'],':e'=>$data['email'],':h'=>$hash,
                            ':fn'=>$data['first_name'],':ln'=>$data['last_name'],':ph'=>$data['phone']]);
@@ -129,7 +129,7 @@ switch ($action) {
             )->execute([':id'=>$newId,':dep'=>$data['department'],':des'=>$data['designation'],':off'=>$data['office_location']]);
             $db->commit();
             logAction('ADD_INSTRUCTOR', "Added instructor {$data['username']}");
-            jsonResponse(true, 'Instructor account created.', ['user_id'=>$newId]);
+            jsonResponse(true, 'Instructor account created. Default password is 12345 and must be changed on first login.', ['user_id'=>$newId]);
         } catch(Exception $e) {
             $db->rollBack();
             jsonResponse(false, 'Failed to create instructor.');
