@@ -63,7 +63,7 @@
         <div class="input-wrap">
           <i class="fas fa-lock"></i>
           <input type="password" id="login-password" class="form-control has-toggle" placeholder="Enter password">
-          <button type="button" class="pw-toggle" onclick="togglePassword('login-password', this)" aria-label="Show password">
+            <button type="button" onclick="togglePassword('login-password', this)" style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);padding:0;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center" aria-label="Show password">
             <i class="fas fa-eye"></i>
           </button>
         </div>
@@ -154,7 +154,7 @@
           <div class="input-wrap">
             <i class="fas fa-lock"></i>
             <input type="password" id="reg-pass" class="form-control has-toggle" placeholder="Min. 8 chars">
-            <button type="button" class="pw-toggle" onclick="togglePassword('reg-pass', this)" aria-label="Show password">
+                <button type="button" onclick="togglePassword('reg-pass', this)" style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);padding:0;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center" aria-label="Show password">
               <i class="fas fa-eye"></i>
             </button>
           </div>
@@ -164,7 +164,7 @@
           <div class="input-wrap">
             <i class="fas fa-lock"></i>
             <input type="password" id="reg-pass2" class="form-control has-toggle" placeholder="Repeat password">
-            <button type="button" class="pw-toggle" onclick="togglePassword('reg-pass2', this)" aria-label="Show password">
+                <button type="button" onclick="togglePassword('reg-pass2', this)" style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);padding:0;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center" aria-label="Show password">
               <i class="fas fa-eye"></i>
             </button>
           </div>
@@ -190,7 +190,7 @@
       <div class="input-wrap">
         <i class="fas fa-lock"></i>
         <input type="password" id="force-new-pass" class="form-control has-toggle" placeholder="Enter new password">
-        <button type="button" class="pw-toggle" onclick="togglePassword('force-new-pass', this)" aria-label="Show password">
+            <button type="button" onclick="togglePassword('force-new-pass', this)" style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);padding:0;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center" aria-label="Show password">
           <i class="fas fa-eye"></i>
         </button>
       </div>
@@ -201,7 +201,7 @@
       <div class="input-wrap">
         <i class="fas fa-lock"></i>
         <input type="password" id="force-new-pass2" class="form-control has-toggle" placeholder="Confirm new password">
-        <button type="button" class="pw-toggle" onclick="togglePassword('force-new-pass2', this)" aria-label="Show password">
+            <button type="button" onclick="togglePassword('force-new-pass2', this)" style="position:absolute;right:1.25rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);padding:0;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center" aria-label="Show password">
           <i class="fas fa-eye"></i>
         </button>
       </div>
