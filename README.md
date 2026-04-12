@@ -329,4 +329,4 @@ Add PHP Mailer or SMTP in `helpers.php` `generateDeadlineNotifications()` functi
 
 ---
 
-*BISU Calape Campus Academic Planner — Thesis Project 2024–2025*
+*BISU Calape Campus Academic Planner — Thesis Project 2026–2027*
