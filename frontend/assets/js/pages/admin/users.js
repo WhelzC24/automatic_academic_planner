@@ -79,7 +79,6 @@ function openModal(roleType) {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('u-pass').value = 'BISU@2024';
   document.getElementById('user-modal').classList.add('show');
 }
 
@@ -96,7 +95,6 @@ async function saveUser() {
   fd.append('username', document.getElementById('u-username').value.trim());
   fd.append('email', document.getElementById('u-email').value.trim());
   fd.append('phone', document.getElementById('u-phone').value.trim());
-  fd.append('password', document.getElementById('u-pass').value);
   if (role === 'student') {
     fd.append('student_number', document.getElementById('u-sn').value.trim());
     fd.append('year_level', document.getElementById('u-year').value);
