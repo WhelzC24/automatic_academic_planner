@@ -84,9 +84,10 @@ layout_header('User Management', 'admin');
       <div class="form-row">
         <div class="form-group"><label>Phone</label>
           <input type="text" class="form-control" id="u-phone"></div>
-        <div class="form-group"><label>Default Password</label>
-          <input type="text" class="form-control" id="u-pass" value="BISU@2024"></div>
       </div>
+      <p style="font-size:.8rem;color:var(--slate);margin-top:-.2rem;margin-bottom:1rem;">
+        Default password is fixed to <strong>12345</strong>. User will be required to change it on first login.
+      </p>
 
       <div id="student-fields">
         <div class="form-row">
