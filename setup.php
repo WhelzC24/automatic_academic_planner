@@ -17,7 +17,7 @@ $success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 2) {
     $host = trim($_POST['db_host'] ?? 'localhost');
-    $name = trim($_POST['db_name'] ?? 'bisu_planner');
+  $name = trim($_POST['db_name'] ?? 'academic_planner');
     $user = trim($_POST['db_user'] ?? 'root');
     $pass = $_POST['db_pass'] ?? '';
     $url  = trim($_POST['app_url'] ?? 'http://localhost/bisu_planner');
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === 2) {
         // 3. Run schema SQL
         $sql = file_get_contents(__DIR__ . '/database/schema.sql');
         // Remove the USE statement since we already selected db
-        $sql = preg_replace('/USE bisu_planner;/', '', $sql);
+        $sql = preg_replace('/^\s*USE\s+`?[A-Za-z0-9_]+`?\s*;\s*$/mi', '', $sql);
         // Split and execute statement by statement
         $statements = array_filter(array_map('trim', explode(';', $sql)));
         foreach ($statements as $stmt) {
@@ -209,7 +209,7 @@ function getDB(): PDO {
           </div>
           <div class="form-group">
             <label>Database Name</label>
-            <input type="text" name="db_name" value="bisu_planner" required>
+            <input type="text" name="db_name" value="academic_planner" required>
           </div>
         </div>
         <div class="form-row">

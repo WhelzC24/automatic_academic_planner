@@ -3,8 +3,8 @@
 -- Database Schema v1.0
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS bisu_planner CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE bisu_planner;
+CREATE DATABASE IF NOT EXISTS academic_planner CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE academic_planner;
 
 -- ============================================================
 -- USERS TABLE

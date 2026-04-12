@@ -79,8 +79,8 @@ Copy the entire `bisu_planner/` folder to:
 ### Step 3 — Create the Database
 
 1. Open **phpMyAdmin** → `http://localhost/phpmyadmin`
-2. Click **"New"** → Name it `bisu_planner` → Create
-3. Click the `bisu_planner` database → **Import** tab
+2. Click **"New"** → Name it `academic_planner` → Create
+3. Click the `academic_planner` database → **Import** tab
 4. Browse to `database/schema.sql` → Click **Go**
 
 ### Step 4 — Configure Database Connection
@@ -89,7 +89,7 @@ Open `backend/config/database.php` and update:
 
 ```php
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'bisu_planner');
+define('DB_NAME', 'academic_planner');
 define('DB_USER', 'root');         // your MySQL username
 define('DB_PASS', '');             // your MySQL password
 define('APP_URL', 'http://localhost/bisu_planner');
