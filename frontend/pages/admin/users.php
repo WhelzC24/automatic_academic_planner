@@ -92,7 +92,7 @@ layout_header('User Management', 'admin');
       <div id="student-fields">
         <div class="form-row">
           <div class="form-group"><label>Student Number *</label>
-            <input type="text" class="form-control" id="u-sn" placeholder="2024-00001"></div>
+            <input type="text" class="form-control" id="u-sn" placeholder="ID Number"></div>
           <div class="form-group"><label>Year Level</label>
             <select class="form-control" id="u-year">
               <option value="1">1st Year</option><option value="2">2nd Year</option>
