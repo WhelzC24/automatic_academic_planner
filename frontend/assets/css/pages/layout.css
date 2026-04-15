@@ -198,6 +198,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
+  width: 100%;
+}
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  flex: 1;
 }
 .topbar {
   background: var(--white);
@@ -518,6 +526,7 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-left: 0; }
+  .app-shell { width: 100%; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .page-content { padding: 1rem; }
 }
