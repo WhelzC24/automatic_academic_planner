@@ -81,34 +81,7 @@ layout_header('Student Dashboard', 'student');
         </div>
       </div>
 
-      <!-- Quick add task -->
-      <div class="card" style="margin-top:1.5rem;">
-        <div class="card-header">
-          <div class="card-title"><i class="fas fa-plus-circle"></i> Quick Add Task</div>
-        </div>
-        <div class="card-body">
-          <div style="display:grid;grid-template-columns:1fr 180px 140px auto;gap:1rem;align-items:end;">
-            <div class="form-group" style="margin:0">
-              <label>Task Name</label>
-              <input type="text" class="form-control" id="quick-name" placeholder="e.g. Study for Math exam">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label>Due Date &amp; Time</label>
-              <input type="datetime-local" class="form-control" id="quick-due">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label>Priority</label>
-              <select class="form-control" id="quick-prio">
-                <option>Low</option>
-                <option selected>Medium</option>
-                <option>High</option>
-                <option>Urgent</option>
-              </select>
-            </div>
-            <button class="btn btn-primary" onclick="quickAddTask()"><i class="fas fa-plus"></i> Add</button>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 </div>
@@ -213,33 +186,7 @@ layout_header('Student Dashboard', 'student');
     loadDashboard();
   }
 
-  async function quickAddTask() {
-    const name = document.getElementById('quick-name').value.trim();
-    const due = document.getElementById('quick-due').value;
-    const prio = document.getElementById('quick-prio').value;
-    if (!name || !due) {
-      toast('Please fill in task name and due date.', 'error');
-      return;
-    }
-    const fd = new FormData();
-    fd.append('action', 'add_task');
-    fd.append('task_name', name);
-    fd.append('due_at', due);
-    fd.append('priority', prio);
-    const res = await fetch(API_STUDENT, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast('Task added!');
-      document.getElementById('quick-name').value = '';
-      document.getElementById('quick-due').value = '';
-      loadDashboard();
-    } else {
-      toast(data.message, 'error');
-    }
-  }
+
 
   // Set date
   document.getElementById('current-date').textContent =

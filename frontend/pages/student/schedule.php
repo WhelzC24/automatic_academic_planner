@@ -165,7 +165,7 @@ layout_header('My Schedule', 'student');
     };
 
     if (!data.schedules.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-calendar"></i><p>No schedules this month. Use the Planner to add some!</p></div>';
+      el.innerHTML = '<div class=\"empty-state\"><i class=\"fas fa-calendar\"></i><p>No course schedules this month.</p></div>';
       return;
     }
 

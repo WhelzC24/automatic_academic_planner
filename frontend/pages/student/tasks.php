@@ -12,19 +12,10 @@ layout_header('My Tasks', 'student');
         <h1>My Tasks</h1>
         <p>Manage and track your academic tasks</p>
       </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Add Task</button>
-      </div>
+      <div class="topbar-actions"></div>
     </div>
 
     <div class="page-content">
-      <!-- Filter tabs -->
-      <div style="display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm filter-btn" onclick="setFilter('all',this)">All Tasks</button>
-        <button class="btn btn-outline btn-sm filter-btn" onclick="setFilter('today',this)">Today</button>
-        <button class="btn btn-outline btn-sm filter-btn" onclick="setFilter('pending',this)">Pending</button>
-        <button class="btn btn-outline btn-sm filter-btn" onclick="setFilter('overdue',this)">Overdue</button>
-      </div>
 
       <div class="card">
         <div class="card-body" style="padding:0">
@@ -37,58 +28,10 @@ layout_header('My Tasks', 'student');
   </div>
 </div>
 
-<!-- Add/Edit Modal -->
-<div class="modal-overlay" id="task-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title-text">Add Task</div>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="edit-id">
-      <div class="form-group">
-        <label>Task Name *</label>
-        <input type="text" class="form-control" id="t-name" placeholder="e.g. Study Chapter 5">
-      </div>
-      <div class="form-group">
-        <label>Description</label>
-        <textarea class="form-control" id="t-desc" placeholder="Optional notes..."></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Due Date &amp; Time *</label>
-          <input type="datetime-local" class="form-control" id="t-due">
-        </div>
-        <div class="form-group">
-          <label>Priority</label>
-          <select class="form-control" id="t-prio">
-            <option>Low</option>
-            <option selected>Medium</option>
-            <option>High</option>
-            <option>Urgent</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group" id="status-group" style="display:none">
-        <label>Status</label>
-        <select class="form-control" id="t-status">
-          <option>Pending</option>
-          <option>In Progress</option>
-          <option>Completed</option>
-          <option>Overdue</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTask()"><i class="fas fa-save"></i> Save Task</button>
-    </div>
-  </div>
-</div>
+
 
 <script>
   const API = BASE_URL + '/backend/student/student_api.php';
-  let currentFilter = 'all';
 
   function priorityBadge(p) {
     const map = {
@@ -110,22 +53,13 @@ layout_header('My Tasks', 'student');
     return `<span class="badge ${map[s]||''}">${s}</span>`;
   }
 
-  function setFilter(f, btn) {
-    currentFilter = f;
-    document.querySelectorAll('.filter-btn').forEach(b => {
-      b.className = 'btn btn-outline btn-sm filter-btn';
-    });
-    btn.className = 'btn btn-primary btn-sm filter-btn';
-    loadTasks();
-  }
-
   async function loadTasks() {
     const el = document.getElementById('tasks-list');
     el.innerHTML = '<div style="padding:2rem;text-align:center"><span class="spinner"></span></div>';
-    const res = await fetch(`${API}?action=get_tasks&filter=${currentFilter}`);
+    const res = await fetch(`${API}?action=get_tasks`);
     const data = await res.json();
     if (!data.tasks.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No tasks found.</p></div>';
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No assignment tasks found.</p></div>';
       return;
     }
     el.innerHTML = `<table><thead><tr>
@@ -146,67 +80,10 @@ layout_header('My Tasks', 'student');
     <td>
       <div style="display:flex;gap:.4rem">
         ${t.status!=='Completed'?`<button class="btn btn-sm btn-success" onclick="quickStatus(${t.task_id},'Completed')" title="Mark Complete"><i class="fas fa-check"></i></button>`:''}
-        <button class="btn btn-sm btn-outline" onclick="editTask(${JSON.stringify(t).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.task_id})"><i class="fas fa-trash"></i></button>
       </div>
     </td>
   </tr>`).join('')}
   </tbody></table>`;
-  }
-
-  function openModal() {
-    document.getElementById('edit-id').value = '';
-    document.getElementById('t-name').value = '';
-    document.getElementById('t-desc').value = '';
-    document.getElementById('t-due').value = '';
-    document.getElementById('t-prio').value = 'Medium';
-    document.getElementById('modal-title-text').textContent = 'Add Task';
-    document.getElementById('status-group').style.display = 'none';
-    document.getElementById('task-modal').classList.add('show');
-  }
-
-  function closeModal() {
-    document.getElementById('task-modal').classList.remove('show');
-  }
-
-  function editTask(t) {
-    document.getElementById('edit-id').value = t.task_id;
-    document.getElementById('t-name').value = t.task_name;
-    document.getElementById('t-desc').value = t.description || '';
-    document.getElementById('t-due').value = t.due_at.replace(' ', 'T').substring(0, 16);
-    document.getElementById('t-prio').value = t.priority;
-    document.getElementById('t-status').value = t.status;
-    document.getElementById('modal-title-text').textContent = 'Edit Task';
-    document.getElementById('status-group').style.display = 'block';
-    document.getElementById('task-modal').classList.add('show');
-  }
-
-  async function saveTask() {
-    const id = document.getElementById('edit-id').value;
-    const name = document.getElementById('t-name').value.trim();
-    const due = document.getElementById('t-due').value;
-    if (!name || !due) {
-      toast('Task name and due date are required.', 'error');
-      return;
-    }
-    const fd = new FormData();
-    fd.append('action', id ? 'update_task' : 'add_task');
-    if (id) fd.append('task_id', id);
-    fd.append('task_name', name);
-    fd.append('description', document.getElementById('t-desc').value);
-    fd.append('due_at', due);
-    fd.append('priority', document.getElementById('t-prio').value);
-    if (id) fd.append('status', document.getElementById('t-status').value);
-    const res = await fetch(API, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast(data.message);
-      closeModal();
-      loadTasks();
-    } else toast(data.message, 'error');
   }
 
   async function quickStatus(id, status) {
@@ -220,22 +97,6 @@ layout_header('My Tasks', 'student');
     });
     toast('Task updated!');
     loadTasks();
-  }
-
-  async function deleteTask(id) {
-    if (!confirm('Delete this task?')) return;
-    const fd = new FormData();
-    fd.append('action', 'delete_task');
-    fd.append('task_id', id);
-    const res = await fetch(API, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast('Task deleted.');
-      loadTasks();
-    } else toast(data.message, 'error');
   }
 
   loadTasks();

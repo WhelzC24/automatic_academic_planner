@@ -12,9 +12,7 @@ layout_header('Planner & Schedule', 'student');
         <h1>Daily Planner</h1>
         <p>Organize your schedule and study sessions</p>
       </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Add Schedule</button>
-      </div>
+      <div class="topbar-actions"></div>
     </div>
     <div class="page-content">
       <!-- Mini Calendar -->
@@ -47,54 +45,7 @@ layout_header('Planner & Schedule', 'student');
   </div>
 </div>
 
-<!-- Add Schedule Modal -->
-<div class="modal-overlay" id="sched-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Add Schedule</div>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Title *</label>
-        <input type="text" class="form-control" id="s-title" placeholder="e.g. Math Class">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Starts At *</label>
-          <input type="datetime-local" class="form-control" id="s-start">
-        </div>
-        <div class="form-group">
-          <label>Ends At *</label>
-          <input type="datetime-local" class="form-control" id="s-end">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Type</label>
-          <select class="form-control" id="s-type">
-            <option>Class</option>
-            <option>Study</option>
-            <option>Personal</option>
-            <option>Meeting</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Color</label>
-          <input type="color" class="form-control" id="s-color" value="#1e3a5f">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Description</label>
-        <textarea class="form-control" id="s-desc" placeholder="Optional notes..."></textarea>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSchedule()"><i class="fas fa-save"></i> Save</button>
-    </div>
-  </div>
-</div>
+
 
 <script>
   const API = BASE_URL + '/backend/student/student_api.php';
@@ -205,7 +156,7 @@ layout_header('Planner & Schedule', 'student');
   function renderScheduleList(items) {
     const el = document.getElementById('schedule-list');
     if (!items.length) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-plus"></i><p>No schedules here. Click a day or add one!</p></div>';
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-calendar"></i><p>No course schedules found.</p></div>';
       return;
     }
     el.innerHTML = items.map(s => {
@@ -224,69 +175,11 @@ layout_header('Planner & Schedule', 'student');
         </div>
         ${s.description ? `<div style="color:var(--slate);font-size:.78rem;margin-top:.3rem">${s.description}</div>` : ''}
       </div>
-      <button class="btn btn-sm btn-danger" onclick="deleteSchedule(${s.schedule_id})"><i class="fas fa-trash"></i></button>
     </div>`;
     }).join('');
   }
 
-  function openModal() {
-    const now = new Date();
-    now.setMinutes(0);
-    const dt = localDateTimeValue(now);
-    document.getElementById('s-title').value = '';
-    document.getElementById('s-start').value = selectedDate ? selectedDate + 'T08:00' : dt;
-    document.getElementById('s-end').value = selectedDate ? selectedDate + 'T09:00' : dt;
-    document.getElementById('s-desc').value = '';
-    document.getElementById('sched-modal').classList.add('show');
-  }
-
-  function closeModal() {
-    document.getElementById('sched-modal').classList.remove('show');
-  }
-
-  async function saveSchedule() {
-    const title = document.getElementById('s-title').value.trim();
-    const start = document.getElementById('s-start').value;
-    const end = document.getElementById('s-end').value;
-    if (!title || !start || !end) {
-      toast('Please fill in all required fields.', 'error');
-      return;
-    }
-    const fd = new FormData();
-    fd.append('action', 'add_schedule');
-    fd.append('title', title);
-    fd.append('starts_at', start);
-    fd.append('ends_at', end);
-    fd.append('type', document.getElementById('s-type').value);
-    fd.append('color', document.getElementById('s-color').value);
-    fd.append('description', document.getElementById('s-desc').value);
-    const res = await fetch(API, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast(data.message);
-      closeModal();
-      loadSchedules();
-    } else toast(data.message, 'error');
-  }
-
-  async function deleteSchedule(id) {
-    if (!confirm('Delete this schedule?')) return;
-    const fd = new FormData();
-    fd.append('action', 'delete_schedule');
-    fd.append('schedule_id', id);
-    const res = await fetch(API, {
-      method: 'POST',
-      body: fd
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast('Schedule deleted.');
-      loadSchedules();
-    }
-  }
+  // Schedules are auto-generated from course offerings
 
   renderCalendar();
   loadSchedules();

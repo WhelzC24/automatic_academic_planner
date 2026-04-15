@@ -72,75 +72,22 @@ switch ($action) {
         jsonResponse(true, 'OK', ['unread_notif' => (int)$stmt->fetch()['cnt']]);
         break;
 
-    // ── TASKS ──────────────────────────────────────────────
+    // ── TASKS ─────────────────────────────────────────────
+    // Tasks are auto-generated from assignments via cron jobs
     case 'get_tasks':
-        $filter = $_GET['filter'] ?? 'all';
         $sql = "SELECT t.*, a.title as assignment_title
                 FROM tasks t LEFT JOIN assignments a ON a.assignment_id = t.assignment_id
-                WHERE t.user_id = :uid";
-        if ($filter === 'today')   $sql .= " AND DATE(t.due_at) = CURDATE()";
-        if ($filter === 'pending') $sql .= " AND t.status = 'Pending'";
-        if ($filter === 'overdue') $sql .= " AND t.status = 'Overdue'";
-        $sql .= " ORDER BY FIELD(t.priority,'Urgent','High','Medium','Low'), t.due_at";
+                WHERE t.user_id = :uid AND t.assignment_id IS NOT NULL
+                ORDER BY FIELD(t.priority,'Urgent','High','Medium','Low'), t.due_at";
         $stmt = $db->prepare($sql);
         $stmt->execute([':uid' => $uid]);
         jsonResponse(true, 'OK', ['tasks' => $stmt->fetchAll()]);
         break;
 
-    case 'add_task':
-        $name  = trim($_POST['task_name'] ?? '');
-        $due   = $_POST['due_at'] ?? '';
-        $prio  = $_POST['priority'] ?? 'Medium';
-        $desc  = trim($_POST['description'] ?? '');
-        $asgId = !empty($_POST['assignment_id']) ? (int)$_POST['assignment_id'] : null;
-
-        if (empty($name) || empty($due)) jsonResponse(false, 'Task name and due date are required.');
-
-        $stmt = $db->prepare(
-            "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority)
-             VALUES (:uid, :aid, :name, :desc, :due, :prio)"
-        );
-        $stmt->execute([':uid' => $uid, ':aid' => $asgId, ':name' => $name, ':desc' => $desc, ':due' => $due, ':prio' => $prio]);
-        jsonResponse(true, 'Task added successfully.', ['task_id' => $db->lastInsertId()]);
-        break;
-
-    case 'update_task':
-        $taskId = (int)($_POST['task_id'] ?? 0);
-        $name   = trim($_POST['task_name'] ?? '');
-        $due    = $_POST['due_at'] ?? '';
-        $prio   = $_POST['priority'] ?? 'Medium';
-        $status = $_POST['status'] ?? 'Pending';
-        $desc   = trim($_POST['description'] ?? '');
-
-        if (!$taskId) jsonResponse(false, 'Invalid task.');
-
-        $stmt = $db->prepare(
-            "UPDATE tasks SET task_name=:name, description=:desc, due_at=:due,
-             priority=:prio, status=:status WHERE task_id=:id AND user_id=:uid"
-        );
-        $stmt->execute([
-            ':name' => $name,
-            ':desc' => $desc,
-            ':due' => $due,
-            ':prio' => $prio,
-            ':status' => $status,
-            ':id' => $taskId,
-            ':uid' => $uid
-        ]);
-        jsonResponse(true, 'Task updated.');
-        break;
-
-    case 'delete_task':
-        $taskId = (int)($_POST['task_id'] ?? 0);
-        $stmt = $db->prepare("DELETE FROM tasks WHERE task_id=:id AND user_id=:uid");
-        $stmt->execute([':id' => $taskId, ':uid' => $uid]);
-        jsonResponse(true, 'Task deleted.');
-        break;
-
     case 'mark_task_status':
         $taskId = (int)($_POST['task_id'] ?? 0);
         $status = $_POST['status'] ?? 'Completed';
-        $stmt = $db->prepare("UPDATE tasks SET status=:s WHERE task_id=:id AND user_id=:uid");
+        $stmt = $db->prepare("UPDATE tasks SET status=:s WHERE task_id=:id AND user_id=:uid AND assignment_id IS NOT NULL");
         $stmt->execute([':s' => $status, ':id' => $taskId, ':uid' => $uid]);
         jsonResponse(true, 'Status updated.');
         break;
@@ -158,42 +105,7 @@ switch ($action) {
         jsonResponse(true, 'OK', ['schedules' => $stmt->fetchAll()]);
         break;
 
-    case 'add_schedule':
-        $title = trim($_POST['title'] ?? '');
-        $start = $_POST['starts_at'] ?? '';
-        $end   = $_POST['ends_at']   ?? '';
-        $type  = $_POST['type']  ?? 'Personal';
-        $color = $_POST['color'] ?? '#4f46e5';
-        $desc  = trim($_POST['description'] ?? '');
-
-        if (empty($title) || empty($start) || empty($end)) jsonResponse(false, 'Required fields missing.');
-
-        $stmt = $db->prepare(
-            "INSERT INTO schedules (user_id, title, description, starts_at, ends_at, type, color)
-             VALUES (:uid, :t, :d, :s, :e, :type, :color)"
-        );
-        $stmt->execute([':uid' => $uid, ':t' => $title, ':d' => $desc, ':s' => $start, ':e' => $end, ':type' => $type, ':color' => $color]);
-
-        // Schedule reminder notification
-        $notif = $db->prepare(
-            "INSERT INTO notifications (user_id, schedule_id, type, message)
-             VALUES (:uid, :sid, 'Schedule Reminder', :msg)"
-        );
-        $notif->execute([
-            ':uid' => $uid,
-            ':sid' => $db->lastInsertId(),
-            ':msg' => "Reminder: \"$title\" is scheduled on " . date('M d, Y h:i A', strtotime($start))
-        ]);
-        jsonResponse(true, 'Schedule added.');
-        break;
-
-    case 'delete_schedule':
-        $sid = (int)($_POST['schedule_id'] ?? 0);
-        $stmt = $db->prepare("DELETE FROM schedules WHERE schedule_id=:id AND user_id=:uid");
-        $stmt->execute([':id' => $sid, ':uid' => $uid]);
-        jsonResponse(true, 'Schedule deleted.');
-        break;
-
+    // Schedules are auto-generated from course offerings
     // ── ASSIGNMENTS ────────────────────────────────────────
     case 'get_assignments':
         $stmt = $db->prepare(
