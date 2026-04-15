@@ -26,18 +26,18 @@ async function doLogout() {
 
 async function loadNotifCount() {
   try {
-    const res = await fetch(BASE_URL + '/backend/student/student_api.php?action=get_dashboard');
+    const res = await fetch(BASE_URL + '/backend/student/student_api.php?action=get_unread_notif_count');
     const data = await res.json();
-    if (data.success && data.unread_notif > 0) {
-      const badge = document.getElementById('nav-notif-count');
-      const dot = document.getElementById('notif-dot');
-      if (badge) {
-        badge.textContent = data.unread_notif;
-        badge.style.display = 'inline-flex';
-      }
-      if (dot) {
-        dot.textContent = data.unread_notif;
-      }
+    if (!data.success) return;
+
+    const badge = document.getElementById('nav-notif-count');
+    const dot = document.getElementById('notif-dot');
+    if (badge) {
+      badge.textContent = data.unread_notif;
+      badge.style.display = data.unread_notif > 0 ? 'inline-flex' : 'none';
+    }
+    if (dot) {
+      dot.textContent = data.unread_notif;
     }
   } catch (e) {
     // Notification count is optional on pages without student context.
