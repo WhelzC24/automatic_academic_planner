@@ -61,7 +61,7 @@ switch ($action) {
         jsonResponse(true, 'OK', [
             'today_tasks' => $todayTasks,
             'upcoming'    => $upcoming,
-            'unread_notif'=> (int)$unread,
+            'unread_notif' => (int)$unread,
             'task_stats'  => $taskStats,
         ]);
         break;
@@ -100,7 +100,7 @@ switch ($action) {
             "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority)
              VALUES (:uid, :aid, :name, :desc, :due, :prio)"
         );
-        $stmt->execute([':uid'=>$uid, ':aid'=>$asgId, ':name'=>$name, ':desc'=>$desc, ':due'=>$due, ':prio'=>$prio]);
+        $stmt->execute([':uid' => $uid, ':aid' => $asgId, ':name' => $name, ':desc' => $desc, ':due' => $due, ':prio' => $prio]);
         jsonResponse(true, 'Task added successfully.', ['task_id' => $db->lastInsertId()]);
         break;
 
@@ -118,15 +118,22 @@ switch ($action) {
             "UPDATE tasks SET task_name=:name, description=:desc, due_at=:due,
              priority=:prio, status=:status WHERE task_id=:id AND user_id=:uid"
         );
-        $stmt->execute([':name'=>$name,':desc'=>$desc,':due'=>$due,':prio'=>$prio,
-                        ':status'=>$status,':id'=>$taskId,':uid'=>$uid]);
+        $stmt->execute([
+            ':name' => $name,
+            ':desc' => $desc,
+            ':due' => $due,
+            ':prio' => $prio,
+            ':status' => $status,
+            ':id' => $taskId,
+            ':uid' => $uid
+        ]);
         jsonResponse(true, 'Task updated.');
         break;
 
     case 'delete_task':
         $taskId = (int)($_POST['task_id'] ?? 0);
         $stmt = $db->prepare("DELETE FROM tasks WHERE task_id=:id AND user_id=:uid");
-        $stmt->execute([':id'=>$taskId, ':uid'=>$uid]);
+        $stmt->execute([':id' => $taskId, ':uid' => $uid]);
         jsonResponse(true, 'Task deleted.');
         break;
 
@@ -134,7 +141,7 @@ switch ($action) {
         $taskId = (int)($_POST['task_id'] ?? 0);
         $status = $_POST['status'] ?? 'Completed';
         $stmt = $db->prepare("UPDATE tasks SET status=:s WHERE task_id=:id AND user_id=:uid");
-        $stmt->execute([':s'=>$status, ':id'=>$taskId, ':uid'=>$uid]);
+        $stmt->execute([':s' => $status, ':id' => $taskId, ':uid' => $uid]);
         jsonResponse(true, 'Status updated.');
         break;
 
@@ -147,7 +154,7 @@ switch ($action) {
              WHERE user_id=:uid AND starts_at <= :e AND ends_at >= :s
              ORDER BY starts_at"
         );
-        $stmt->execute([':uid'=>$uid, ':s'=>$start, ':e'=>$end]);
+        $stmt->execute([':uid' => $uid, ':s' => $start, ':e' => $end]);
         jsonResponse(true, 'OK', ['schedules' => $stmt->fetchAll()]);
         break;
 
@@ -165,22 +172,25 @@ switch ($action) {
             "INSERT INTO schedules (user_id, title, description, starts_at, ends_at, type, color)
              VALUES (:uid, :t, :d, :s, :e, :type, :color)"
         );
-        $stmt->execute([':uid'=>$uid,':t'=>$title,':d'=>$desc,':s'=>$start,':e'=>$end,':type'=>$type,':color'=>$color]);
+        $stmt->execute([':uid' => $uid, ':t' => $title, ':d' => $desc, ':s' => $start, ':e' => $end, ':type' => $type, ':color' => $color]);
 
         // Schedule reminder notification
         $notif = $db->prepare(
             "INSERT INTO notifications (user_id, schedule_id, type, message)
              VALUES (:uid, :sid, 'Schedule Reminder', :msg)"
         );
-        $notif->execute([':uid'=>$uid, ':sid'=>$db->lastInsertId(),
-                         ':msg'=>"Reminder: \"$title\" is scheduled on " . date('M d, Y h:i A', strtotime($start))]);
+        $notif->execute([
+            ':uid' => $uid,
+            ':sid' => $db->lastInsertId(),
+            ':msg' => "Reminder: \"$title\" is scheduled on " . date('M d, Y h:i A', strtotime($start))
+        ]);
         jsonResponse(true, 'Schedule added.');
         break;
 
     case 'delete_schedule':
         $sid = (int)($_POST['schedule_id'] ?? 0);
         $stmt = $db->prepare("DELETE FROM schedules WHERE schedule_id=:id AND user_id=:uid");
-        $stmt->execute([':id'=>$sid, ':uid'=>$uid]);
+        $stmt->execute([':id' => $sid, ':uid' => $uid]);
         jsonResponse(true, 'Schedule deleted.');
         break;
 
@@ -210,7 +220,7 @@ switch ($action) {
 
         $file     = $_FILES['submission_file'];
         $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed  = ['pdf','doc','docx','txt','zip','png','jpg','jpeg'];
+        $allowed  = ['pdf', 'doc', 'docx', 'txt', 'zip', 'png', 'jpg', 'jpeg'];
         if (!in_array($ext, $allowed)) jsonResponse(false, 'File type not allowed.');
 
         if ($file['size'] > 10 * 1024 * 1024) jsonResponse(false, 'File size must not exceed 10MB.');
@@ -223,7 +233,7 @@ switch ($action) {
 
         // Check if late
         $chk = $db->prepare("SELECT due_at FROM assignments WHERE assignment_id=:id");
-        $chk->execute([':id'=>$asgId]);
+        $chk->execute([':id' => $asgId]);
         $asg = $chk->fetch();
         $status = (strtotime($asg['due_at']) < time()) ? 'late' : 'submitted';
 
@@ -232,15 +242,18 @@ switch ($action) {
              VALUES (:aid, :sid, :fp, :st)
              ON DUPLICATE KEY UPDATE file_path=:fp, status=:st, submitted_at=NOW()"
         );
-        $ins->execute([':aid'=>$asgId, ':sid'=>$uid, ':fp'=>$filePath, ':st'=>$status]);
+        $ins->execute([':aid' => $asgId, ':sid' => $uid, ':fp' => $filePath, ':st' => $status]);
 
         // Confirmation notification
         $notif = $db->prepare(
             "INSERT INTO notifications (user_id, assignment_id, type, message)
              VALUES (:uid, :aid, 'Submission Confirmation', :msg)"
         );
-        $notif->execute([':uid'=>$uid, ':aid'=>$asgId,
-                         ':msg'=>"Your submission for assignment ID $asgId has been received ($status)."]);
+        $notif->execute([
+            ':uid' => $uid,
+            ':aid' => $asgId,
+            ':msg' => "Your submission for assignment ID $asgId has been received ($status)."
+        ]);
         jsonResponse(true, 'Assignment submitted successfully.');
         break;
 
@@ -249,20 +262,20 @@ switch ($action) {
         $stmt = $db->prepare(
             "SELECT * FROM notifications WHERE user_id=:uid ORDER BY sent_at DESC LIMIT 50"
         );
-        $stmt->execute([':uid'=>$uid]);
+        $stmt->execute([':uid' => $uid]);
         jsonResponse(true, 'OK', ['notifications' => $stmt->fetchAll()]);
         break;
 
     case 'mark_notification_read':
         $nid = (int)($_POST['notification_id'] ?? 0);
         $db->prepare("UPDATE notifications SET read_at=NOW() WHERE notification_id=:id AND user_id=:uid")
-           ->execute([':id'=>$nid, ':uid'=>$uid]);
+            ->execute([':id' => $nid, ':uid' => $uid]);
         jsonResponse(true, 'Marked as read.');
         break;
 
     case 'mark_all_read':
         $db->prepare("UPDATE notifications SET read_at=NOW() WHERE user_id=:uid AND read_at IS NULL")
-           ->execute([':uid'=>$uid]);
+            ->execute([':uid' => $uid]);
         jsonResponse(true, 'All notifications marked as read.');
         break;
 
