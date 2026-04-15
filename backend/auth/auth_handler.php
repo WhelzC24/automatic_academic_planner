@@ -15,7 +15,7 @@ switch ($action) {
 
     // ----------------------------------------------------------
     case 'login':
-    // ----------------------------------------------------------
+        // ----------------------------------------------------------
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
@@ -29,7 +29,7 @@ switch ($action) {
             "SELECT user_id, username, email, password_hash, first_name, last_name, role, is_active, must_change_password
                FROM users WHERE username = :username OR email = :email LIMIT 1"
         );
-           $stmt->execute([':username' => $username, ':email' => $username]);
+        $stmt->execute([':username' => $username, ':email' => $username]);
         $user = $stmt->fetch();
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
@@ -72,7 +72,7 @@ switch ($action) {
 
     // ----------------------------------------------------------
     case 'change_password_required':
-    // ----------------------------------------------------------
+        // ----------------------------------------------------------
         if (empty($_SESSION['user_id'])) {
             jsonResponse(false, 'Session expired. Please log in again.');
         }
@@ -124,16 +124,28 @@ switch ($action) {
 
     // ----------------------------------------------------------
     case 'register':
-    // ----------------------------------------------------------
-        $fields = ['first_name','last_name','username','email','password','confirm_password',
-                   'phone','student_number','program','year_level'];
+        // ----------------------------------------------------------
+        $fields = [
+            'first_name',
+            'last_name',
+            'username',
+            'email',
+            'password',
+            'confirm_password',
+            'phone',
+            'student_number',
+            'program',
+            'year_level'
+        ];
         $data = [];
         foreach ($fields as $f) $data[$f] = trim($_POST[$f] ?? '');
 
         // Validate
-        if (empty($data['first_name']) || empty($data['last_name']) ||
+        if (
+            empty($data['first_name']) || empty($data['last_name']) ||
             empty($data['username'])   || empty($data['email'])     ||
-            empty($data['password'])   || empty($data['student_number'])) {
+            empty($data['password'])   || empty($data['student_number'])
+        ) {
             jsonResponse(false, 'All required fields must be filled.');
         }
 
@@ -173,8 +185,12 @@ switch ($action) {
                  VALUES (:u, :e, :h, :fn, :ln, :ph, 'student')"
             );
             $ins->execute([
-                ':u' => $data['username'], ':e' => $data['email'], ':h' => $hash,
-                ':fn' => $data['first_name'], ':ln' => $data['last_name'], ':ph' => $data['phone'],
+                ':u' => $data['username'],
+                ':e' => $data['email'],
+                ':h' => $hash,
+                ':fn' => $data['first_name'],
+                ':ln' => $data['last_name'],
+                ':ph' => $data['phone'],
             ]);
             $userId = $db->lastInsertId();
 
@@ -183,8 +199,10 @@ switch ($action) {
                  VALUES (:id, :sn, :prog, :yr)"
             );
             $ins2->execute([
-                ':id' => $userId, ':sn' => $data['student_number'],
-                ':prog' => $data['program'], ':yr' => (int)$data['year_level'],
+                ':id' => $userId,
+                ':sn' => $data['student_number'],
+                ':prog' => $data['program'],
+                ':yr' => (int)$data['year_level'],
             ]);
 
             $db->commit();
@@ -198,7 +216,7 @@ switch ($action) {
 
     // ----------------------------------------------------------
     case 'logout':
-    // ----------------------------------------------------------
+        // ----------------------------------------------------------
         logAction('LOGOUT', "User {$_SESSION['username']} logged out.");
         $_SESSION = [];
         session_destroy();

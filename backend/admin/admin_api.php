@@ -19,9 +19,9 @@ switch ($action) {
     // ── DASHBOARD STATS ────────────────────────────────────
     case 'get_stats':
         $stats = [];
-        foreach (['student','instructor','admin'] as $role) {
+        foreach (['student', 'instructor', 'admin'] as $role) {
             $s = $db->prepare("SELECT COUNT(*) as c FROM users WHERE role=:r AND is_active=1");
-            $s->execute([':r'=>$role]);
+            $s->execute([':r' => $role]);
             $stats[$role . '_count'] = (int)$s->fetch()['c'];
         }
         $s = $db->prepare("SELECT COUNT(*) as c FROM courses");
@@ -80,22 +80,28 @@ switch ($action) {
             jsonResponse(false, 'Required fields missing.');
         }
         $defaultPassword = '12345';
-        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost'=>12]);
+        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost' => 12]);
         $db->beginTransaction();
         try {
             $ins = $db->prepare(
                 "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role,must_change_password)
                  VALUES (:u,:e,:h,:fn,:ln,:ph,'student',1)"
             );
-            $ins->execute([':u'=>$data['username'],':e'=>$data['email'],':h'=>$hash,
-                           ':fn'=>$data['first_name'],':ln'=>$data['last_name'],':ph'=>$data['phone']]);
+            $ins->execute([
+                ':u' => $data['username'],
+                ':e' => $data['email'],
+                ':h' => $hash,
+                ':fn' => $data['first_name'],
+                ':ln' => $data['last_name'],
+                ':ph' => $data['phone']
+            ]);
             $newId = $db->lastInsertId();
             $db->prepare("INSERT INTO students (user_id,student_number,program,year_level) VALUES(:id,:sn,:pr,:yr)")
-               ->execute([':id'=>$newId,':sn'=>$data['student_number'],':pr'=>$data['program'],':yr'=>$data['year_level']]);
+                ->execute([':id' => $newId, ':sn' => $data['student_number'], ':pr' => $data['program'], ':yr' => $data['year_level']]);
             $db->commit();
             logAction('ADD_STUDENT', "Added student {$data['username']}");
-            jsonResponse(true, 'Student account created. Default password is 12345 and must be changed on first login.', ['user_id'=>$newId]);
-        } catch(Exception $e) {
+            jsonResponse(true, 'Student account created. Default password is 12345 and must be changed on first login.', ['user_id' => $newId]);
+        } catch (Exception $e) {
             $db->rollBack();
             jsonResponse(false, 'Failed to create student. Username or email may already exist.');
         }
@@ -110,27 +116,33 @@ switch ($action) {
             'phone'          => trim($_POST['phone'] ?? ''),
             'department'     => trim($_POST['department'] ?? ''),
             'designation'    => trim($_POST['designation'] ?? ''),
-            'office_location'=> trim($_POST['office_location'] ?? ''),
+            'office_location' => trim($_POST['office_location'] ?? ''),
         ];
         $defaultPassword = '12345';
-        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost'=>12]);
+        $hash = password_hash($defaultPassword, PASSWORD_BCRYPT, ['cost' => 12]);
         $db->beginTransaction();
         try {
             $ins = $db->prepare(
                 "INSERT INTO users (username,email,password_hash,first_name,last_name,phone,role,must_change_password)
                  VALUES (:u,:e,:h,:fn,:ln,:ph,'instructor',1)"
             );
-            $ins->execute([':u'=>$data['username'],':e'=>$data['email'],':h'=>$hash,
-                           ':fn'=>$data['first_name'],':ln'=>$data['last_name'],':ph'=>$data['phone']]);
+            $ins->execute([
+                ':u' => $data['username'],
+                ':e' => $data['email'],
+                ':h' => $hash,
+                ':fn' => $data['first_name'],
+                ':ln' => $data['last_name'],
+                ':ph' => $data['phone']
+            ]);
             $newId = $db->lastInsertId();
             $db->prepare(
                 "INSERT INTO instructors (user_id,department,designation,office_location)
                  VALUES(:id,:dep,:des,:off)"
-            )->execute([':id'=>$newId,':dep'=>$data['department'],':des'=>$data['designation'],':off'=>$data['office_location']]);
+            )->execute([':id' => $newId, ':dep' => $data['department'], ':des' => $data['designation'], ':off' => $data['office_location']]);
             $db->commit();
             logAction('ADD_INSTRUCTOR', "Added instructor {$data['username']}");
-            jsonResponse(true, 'Instructor account created. Default password is 12345 and must be changed on first login.', ['user_id'=>$newId]);
-        } catch(Exception $e) {
+            jsonResponse(true, 'Instructor account created. Default password is 12345 and must be changed on first login.', ['user_id' => $newId]);
+        } catch (Exception $e) {
             $db->rollBack();
             jsonResponse(false, 'Failed to create instructor.');
         }
@@ -140,7 +152,7 @@ switch ($action) {
         $userId = (int)($_POST['user_id'] ?? 0);
         if (!$userId) jsonResponse(false, 'Invalid user ID.');
         if ($userId === $uid) jsonResponse(false, 'You cannot deactivate or activate your own account.');
-        $db->prepare("UPDATE users SET is_active = NOT is_active WHERE user_id=:id")->execute([':id'=>$userId]);
+        $db->prepare("UPDATE users SET is_active = NOT is_active WHERE user_id=:id")->execute([':id' => $userId]);
         logAction('TOGGLE_USER', "Toggled user $userId");
         jsonResponse(true, 'User status updated.');
         break;
@@ -149,7 +161,7 @@ switch ($action) {
         $userId = (int)($_POST['user_id'] ?? 0);
         if (!$userId) jsonResponse(false, 'Invalid user ID.');
         if ($userId === $uid) jsonResponse(false, 'Cannot delete yourself.');
-        $db->prepare("DELETE FROM users WHERE user_id=:id")->execute([':id'=>$userId]);
+        $db->prepare("DELETE FROM users WHERE user_id=:id")->execute([':id' => $userId]);
         logAction('DELETE_USER', "Deleted user $userId");
         jsonResponse(true, 'User deleted.');
         break;
@@ -201,9 +213,9 @@ switch ($action) {
         if (!$code || !$title) jsonResponse(false, 'Code and title are required.');
         try {
             $db->prepare("INSERT INTO courses (code,title,description,units) VALUES(:c,:t,:d,:u)")
-               ->execute([':c'=>$code,':t'=>$title,':d'=>$desc,':u'=>$units]);
-            jsonResponse(true, 'Course added.', ['course_id'=>$db->lastInsertId()]);
-        } catch(Exception $e) {
+                ->execute([':c' => $code, ':t' => $title, ':d' => $desc, ':u' => $units]);
+            jsonResponse(true, 'Course added.', ['course_id' => $db->lastInsertId()]);
+        } catch (Exception $e) {
             jsonResponse(false, 'Course code already exists.');
         }
         break;
@@ -217,13 +229,13 @@ switch ($action) {
         $instrId   = (int)($_POST['instructor_id'] ?? 0);
         if (!$courseId || !$term || !$section) jsonResponse(false, 'Required fields missing.');
         $db->prepare("INSERT INTO course_offerings (course_id,term,section,schedule,room) VALUES(:cid,:t,:s,:sch,:r)")
-           ->execute([':cid'=>$courseId,':t'=>$term,':s'=>$section,':sch'=>$schedule,':r'=>$room]);
+            ->execute([':cid' => $courseId, ':t' => $term, ':s' => $section, ':sch' => $schedule, ':r' => $room]);
         $offeringId = $db->lastInsertId();
         if ($instrId) {
             $db->prepare("INSERT INTO teaching_assignments (offering_id,instructor_id) VALUES(:oid,:iid)")
-               ->execute([':oid'=>$offeringId,':iid'=>$instrId]);
+                ->execute([':oid' => $offeringId, ':iid' => $instrId]);
         }
-        jsonResponse(true, 'Course offering created.', ['offering_id'=>$offeringId]);
+        jsonResponse(true, 'Course offering created.', ['offering_id' => $offeringId]);
         break;
 
     case 'enroll_student':
@@ -231,9 +243,9 @@ switch ($action) {
         $offeringId = (int)($_POST['offering_id'] ?? 0);
         try {
             $db->prepare("INSERT INTO enrollments (offering_id,student_id) VALUES(:oid,:sid)")
-               ->execute([':oid'=>$offeringId,':sid'=>$studentId]);
+                ->execute([':oid' => $offeringId, ':sid' => $studentId]);
             jsonResponse(true, 'Student enrolled.');
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             jsonResponse(false, 'Student already enrolled in this offering.');
         }
         break;
@@ -294,23 +306,23 @@ switch ($action) {
 
     case 'assign_instructor':
         $offeringId  = (int)($_POST['offering_id']  ?? 0);
-        $instructorId= (int)($_POST['instructor_id'] ?? 0);
+        $instructorId = (int)($_POST['instructor_id'] ?? 0);
         if (!$offeringId || !$instructorId) jsonResponse(false, 'Missing data.');
         try {
             $db->prepare("INSERT INTO teaching_assignments (offering_id, instructor_id) VALUES(:oid,:iid)")
-               ->execute([':oid'=>$offeringId, ':iid'=>$instructorId]);
+                ->execute([':oid' => $offeringId, ':iid' => $instructorId]);
             jsonResponse(true, 'Instructor assigned.');
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             // Already assigned — update
             $db->prepare("UPDATE teaching_assignments SET instructor_id=:iid WHERE offering_id=:oid")
-               ->execute([':iid'=>$instructorId, ':oid'=>$offeringId]);
+                ->execute([':iid' => $instructorId, ':oid' => $offeringId]);
             jsonResponse(true, 'Instructor assignment updated.');
         }
         break;
 
     case 'get_system_summary':
         $summary = [];
-        $tables  = ['users','students','courses','course_offerings','enrollments','assignments','submissions','tasks','notifications','system_logs'];
+        $tables  = ['users', 'students', 'courses', 'course_offerings', 'enrollments', 'assignments', 'submissions', 'tasks', 'notifications', 'system_logs'];
         foreach ($tables as $t) {
             $cnt = $db->query("SELECT COUNT(*) as c FROM `$t`")->fetch()['c'];
             $summary[$t] = (int)$cnt;

@@ -7,7 +7,8 @@
 require_once __DIR__ . '/database.php';
 
 // Start session securely
-function startSession(): void {
+function startSession(): void
+{
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.cookie_httponly', 1);
         ini_set('session.use_strict_mode', 1);
@@ -16,7 +17,8 @@ function startSession(): void {
 }
 
 // Require authenticated user; redirect if not
-function requireAuth(string ...$roles): void {
+function requireAuth(string ...$roles): void
+{
     startSession();
     if (empty($_SESSION['user_id'])) {
         header('Location: ' . APP_URL . '/frontend/pages/login.php');
@@ -29,19 +31,22 @@ function requireAuth(string ...$roles): void {
 }
 
 // JSON response helper
-function jsonResponse(bool $success, string $message, array $data = []): void {
+function jsonResponse(bool $success, string $message, array $data = []): void
+{
     header('Content-Type: application/json');
     echo json_encode(array_merge(['success' => $success, 'message' => $message], $data));
     exit;
 }
 
 // Sanitize output
-function e(string $str): string {
+function e(string $str): string
+{
     return htmlspecialchars($str, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
 // Log system action
-function logAction(string $action, string $description = ''): void {
+function logAction(string $action, string $description = ''): void
+{
     try {
         $db = getDB();
         $stmt = $db->prepare(
@@ -60,7 +65,8 @@ function logAction(string $action, string $description = ''): void {
 }
 
 // Get current user full info
-function getCurrentUser(): ?array {
+function getCurrentUser(): ?array
+{
     startSession();
     if (empty($_SESSION['user_id'])) return null;
     $db = getDB();
@@ -70,7 +76,8 @@ function getCurrentUser(): ?array {
 }
 
 // Auto-mark overdue tasks
-function autoMarkOverdue(): void {
+function autoMarkOverdue(): void
+{
     $db = getDB();
     $db->exec(
         "UPDATE tasks SET status = 'Overdue'
@@ -79,7 +86,8 @@ function autoMarkOverdue(): void {
 }
 
 // Generate deadline reminder notifications
-function generateDeadlineNotifications(): void {
+function generateDeadlineNotifications(): void
+{
     $db = getDB();
 
     // Assignments due in 3 days, 1 day, or today — avoid duplicates
@@ -106,8 +114,10 @@ function generateDeadlineNotifications(): void {
     }
 }
 
+
 // Ensure users table supports forced password change flow
-function ensureForcePasswordChangeColumn(PDO $db): void {
+function ensureForcePasswordChangeColumn(PDO $db): void
+{
     static $checked = false;
     if ($checked) return;
 
