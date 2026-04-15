@@ -130,6 +130,21 @@ switch ($action) {
         if (!$asgId) jsonResponse(false, 'Invalid assignment.');
         if (empty($_FILES['submission_file'])) jsonResponse(false, 'No file uploaded.');
 
+        // Student can only submit assignments from offerings they are enrolled in
+        $asgChk = $db->prepare(
+            "SELECT a.due_at
+             FROM assignments a
+             JOIN course_offerings co ON co.offering_id = a.offering_id
+             JOIN enrollments e ON e.offering_id = co.offering_id
+             WHERE a.assignment_id = :aid AND e.student_id = :uid
+             LIMIT 1"
+        );
+        $asgChk->execute([':aid' => $asgId, ':uid' => $uid]);
+        $asg = $asgChk->fetch();
+        if (!$asg) {
+            jsonResponse(false, 'You are not authorized to submit this assignment.');
+        }
+
         $file     = $_FILES['submission_file'];
         $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowed  = ['pdf', 'doc', 'docx', 'txt', 'zip', 'png', 'jpg', 'jpeg'];
@@ -140,13 +155,12 @@ switch ($action) {
         $dir = UPLOAD_DIR . "submissions/$uid/";
         if (!is_dir($dir)) mkdir($dir, 0755, true);
         $filename = uniqid("sub_{$asgId}_") . ".$ext";
-        move_uploaded_file($file['tmp_name'], $dir . $filename);
+        if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) {
+            jsonResponse(false, 'Failed to upload file. Please try again.');
+        }
         $filePath = "uploads/submissions/$uid/$filename";
 
         // Check if late
-        $chk = $db->prepare("SELECT due_at FROM assignments WHERE assignment_id=:id");
-        $chk->execute([':id' => $asgId]);
-        $asg = $chk->fetch();
         $status = (strtotime($asg['due_at']) < time()) ? 'late' : 'submitted';
 
         $ins = $db->prepare(

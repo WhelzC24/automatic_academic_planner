@@ -80,26 +80,64 @@ switch ($action) {
             "SELECT ta_id FROM teaching_assignments
              WHERE offering_id=:oid AND instructor_id=:uid"
         );
-        $chk->execute([':oid'=>$offeringId, ':uid'=>$uid]);
+        $chk->execute([':oid' => $offeringId, ':uid' => $uid]);
         if (!$chk->fetch()) jsonResponse(false, 'Unauthorized.');
 
         $stmt = $db->prepare(
             "INSERT INTO assignments (offering_id, created_by, title, description, due_at, max_score)
              VALUES (:oid, :uid, :t, :d, :due, :ms)"
         );
-        $stmt->execute([':oid'=>$offeringId,':uid'=>$uid,':t'=>$title,':d'=>$desc,':due'=>$dueAt,':ms'=>$maxScore]);
+        $stmt->execute([':oid' => $offeringId, ':uid' => $uid, ':t' => $title, ':d' => $desc, ':due' => $dueAt, ':ms' => $maxScore]);
         $asgId = $db->lastInsertId();
+
+        $hoursUntilDue = (strtotime($dueAt) - time()) / 3600;
+        if ($hoursUntilDue <= 24) {
+            $priority = 'Urgent';
+        } elseif ($hoursUntilDue <= 72) {
+            $priority = 'High';
+        } elseif ($hoursUntilDue <= 168) {
+            $priority = 'Medium';
+        } else {
+            $priority = 'Low';
+        }
 
         // Notify enrolled students
         $enrolled = $db->prepare(
             "SELECT student_id FROM enrollments WHERE offering_id=:oid"
         );
-        $enrolled->execute([':oid'=>$offeringId]);
+        $enrolled->execute([':oid' => $offeringId]);
+        $students = $enrolled->fetchAll();
+
+        // Auto-generate planner tasks for enrolled students
+        $taskExistsStmt = $db->prepare(
+            "SELECT task_id FROM tasks WHERE user_id=:uid AND assignment_id=:aid LIMIT 1"
+        );
+        $taskInsertStmt = $db->prepare(
+            "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority, status)
+             VALUES (:uid, :aid, :task_name, :task_desc, :due_at, :prio, :status)"
+        );
+
+        foreach ($students as $row) {
+            $studentId = (int)$row['student_id'];
+            $taskExistsStmt->execute([':uid' => $studentId, ':aid' => $asgId]);
+            if (!$taskExistsStmt->fetch()) {
+                $taskInsertStmt->execute([
+                    ':uid' => $studentId,
+                    ':aid' => $asgId,
+                    ':task_name' => "Submit: $title",
+                    ':task_desc' => $desc,
+                    ':due_at' => $dueAt,
+                    ':prio' => $priority,
+                    ':status' => (strtotime($dueAt) < time()) ? 'Overdue' : 'Pending',
+                ]);
+            }
+        }
+
         $notifStmt = $db->prepare(
             "INSERT INTO notifications (user_id, assignment_id, type, message)
              VALUES (:uid, :aid, 'Assignment Posted', :msg)"
         );
-        foreach ($enrolled->fetchAll() as $row) {
+        foreach ($students as $row) {
             $notifStmt->execute([
                 ':uid' => $row['student_id'],
                 ':aid' => $asgId,
@@ -108,7 +146,7 @@ switch ($action) {
         }
 
         logAction('CREATE_ASSIGNMENT', "Assignment '$title' created.");
-        jsonResponse(true, 'Assignment created and students notified.', ['assignment_id' => $asgId]);
+        jsonResponse(true, 'Assignment created, students notified, and planner tasks generated.', ['assignment_id' => $asgId]);
         break;
 
     case 'update_assignment':
@@ -118,6 +156,17 @@ switch ($action) {
         $dueAt    = $_POST['due_at'] ?? '';
         $maxScore = (float)($_POST['max_score'] ?? 100);
 
+        $hoursUntilDue = (strtotime($dueAt) - time()) / 3600;
+        if ($hoursUntilDue <= 24) {
+            $priority = 'Urgent';
+        } elseif ($hoursUntilDue <= 72) {
+            $priority = 'High';
+        } elseif ($hoursUntilDue <= 168) {
+            $priority = 'Medium';
+        } else {
+            $priority = 'Low';
+        }
+
         $stmt = $db->prepare(
             "UPDATE assignments a
              JOIN course_offerings co ON co.offering_id = a.offering_id
@@ -125,7 +174,33 @@ switch ($action) {
              SET a.title=:t, a.description=:d, a.due_at=:due, a.max_score=:ms
              WHERE a.assignment_id=:aid"
         );
-        $stmt->execute([':uid'=>$uid,':t'=>$title,':d'=>$desc,':due'=>$dueAt,':ms'=>$maxScore,':aid'=>$asgId]);
+        $stmt->execute([':uid' => $uid, ':t' => $title, ':d' => $desc, ':due' => $dueAt, ':ms' => $maxScore, ':aid' => $asgId]);
+
+        // Keep auto-generated planner tasks in sync with assignment changes
+        $syncTasks = $db->prepare(
+            "UPDATE tasks
+             SET task_name=:task_name,
+                 description=:task_desc,
+                 due_at=:task_due,
+                 priority=:task_prio,
+                 status = CASE
+                     WHEN status = 'Completed' THEN status
+                     WHEN :due_for_status < NOW() THEN 'Overdue'
+                     WHEN status = 'Overdue' AND :due_for_reopen >= NOW() THEN 'Pending'
+                     ELSE status
+                 END
+             WHERE assignment_id=:aid"
+        );
+        $syncTasks->execute([
+            ':task_name' => "Submit: $title",
+            ':task_desc' => $desc,
+            ':task_due' => $dueAt,
+            ':task_prio' => $priority,
+            ':due_for_status' => $dueAt,
+            ':due_for_reopen' => $dueAt,
+            ':aid' => $asgId,
+        ]);
+
         jsonResponse(true, 'Assignment updated.');
         break;
 
@@ -137,7 +212,7 @@ switch ($action) {
              JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
              WHERE a.assignment_id = :aid"
         );
-        $stmt->execute([':uid'=>$uid, ':aid'=>$asgId]);
+        $stmt->execute([':uid' => $uid, ':aid' => $asgId]);
         jsonResponse(true, 'Assignment deleted.');
         break;
 
@@ -155,7 +230,7 @@ switch ($action) {
              WHERE sub.assignment_id = :aid
              ORDER BY sub.submitted_at"
         );
-        $stmt->execute([':uid'=>$uid, ':aid'=>$asgId]);
+        $stmt->execute([':uid' => $uid, ':aid' => $asgId]);
         jsonResponse(true, 'OK', ['submissions' => $stmt->fetchAll()]);
         break;
 
@@ -172,7 +247,7 @@ switch ($action) {
              SET sub.grade=:g, sub.feedback=:fb, sub.status='graded'
              WHERE sub.submission_id = :sid"
         );
-        $stmt->execute([':uid'=>$uid, ':g'=>$grade, ':fb'=>$feedback, ':sid'=>$subId]);
+        $stmt->execute([':uid' => $uid, ':g' => $grade, ':fb' => $feedback, ':sid' => $subId]);
         jsonResponse(true, 'Grade saved.');
         break;
 

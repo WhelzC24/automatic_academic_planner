@@ -2,48 +2,58 @@
 require_once __DIR__ . '/../../../backend/config/helpers.php';
 requireAuth('instructor');
 require_once __DIR__ . '/../layout.php';
+$assignmentsJsVersion = @filemtime(__DIR__ . '/../../assets/js/pages/instructor/assignments.js') ?: time();
 layout_header('Assignments', 'instructor', [APP_URL . '/frontend/assets/css/pages/instructor/assignments.css']);
 ?>
 <div class="instructor-page-shell">
-<?php layout_sidebar('instructor','assignments'); ?>
-<div class="main-content">
-  <div class="topbar">
-    <div class="topbar-title"><h1>Assignments</h1><p>Create and manage course assignments</p></div>
-    <div class="topbar-actions">
-      <a class="btn btn-outline" href="submissions.php"><i class="fas fa-inbox"></i> View Submissions</a>
-      <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Create Assignment</button>
-    </div>
-  </div>
-  <div class="page-content">
-    <div class="instructor-content-grid">
-      <div class="card">
-        <div class="card-body" style="padding:0">
-          <div id="asg-list"><div class="assignments-loading"><span class="spinner"></span></div></div>
-        </div>
+  <?php layout_sidebar('instructor', 'assignments'); ?>
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h1>Assignments</h1>
+        <p>Create and manage course assignments</p>
       </div>
-
-      <aside class="instructor-side">
+      <div class="topbar-actions">
+        <a class="btn btn-outline" href="submissions.php"><i class="fas fa-inbox"></i> View Submissions</a>
+        <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Create Assignment</button>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="instructor-content-grid">
         <div class="card">
-          <div class="card-header"><div class="card-title"><i class="fas fa-chart-pie"></i> Assignment Snapshot</div></div>
-          <div class="card-body">
-            <div class="snapshot-row"><span>Total Assignments</span><strong id="a-total">0</strong></div>
-            <div class="snapshot-row"><span>Overdue</span><strong id="a-overdue">0</strong></div>
-            <div class="snapshot-row"><span>With Submissions</span><strong id="a-with-subs">0</strong></div>
+          <div class="card-body" style="padding:0">
+            <div id="asg-list">
+              <div class="assignments-loading"><span class="spinner"></span></div>
+            </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header"><div class="card-title"><i class="fas fa-bolt"></i> Quick Actions</div></div>
-          <div class="card-body quick-links">
-            <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Create New</button>
-            <a class="btn btn-outline" href="submissions.php"><i class="fas fa-inbox"></i> Grade Submissions</a>
-            <a class="btn btn-outline" href="courses.php"><i class="fas fa-book-open"></i> View Courses</a>
+        <aside class="instructor-side">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-chart-pie"></i> Assignment Snapshot</div>
+            </div>
+            <div class="card-body">
+              <div class="snapshot-row"><span>Total Assignments</span><strong id="a-total">0</strong></div>
+              <div class="snapshot-row"><span>Overdue</span><strong id="a-overdue">0</strong></div>
+              <div class="snapshot-row"><span>With Submissions</span><strong id="a-with-subs">0</strong></div>
+            </div>
           </div>
-        </div>
-      </aside>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="fas fa-bolt"></i> Quick Actions</div>
+            </div>
+            <div class="card-body quick-links">
+              <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Create New</button>
+              <a class="btn btn-outline" href="submissions.php"><i class="fas fa-inbox"></i> Grade Submissions</a>
+              <a class="btn btn-outline" href="courses.php"><i class="fas fa-book-open"></i> View Courses</a>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   </div>
-</div>
 </div>
 
 <!-- Create/Edit Modal -->
@@ -57,7 +67,9 @@ layout_header('Assignments', 'instructor', [APP_URL . '/frontend/assets/css/page
       <input type="hidden" id="edit-id">
       <div class="form-group">
         <label>Course Offering *</label>
-        <select class="form-control" id="a-offering"><option value="">Loading...</option></select>
+        <select class="form-control" id="a-offering">
+          <option value="">Loading...</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Title *</label>
@@ -111,5 +123,23 @@ layout_header('Assignments', 'instructor', [APP_URL . '/frontend/assets/css/page
   </div>
 </div>
 
-<script src="<?= APP_URL ?>/frontend/assets/js/pages/instructor/assignments.js"></script>
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Delete Assignment</div>
+      <button class="modal-close" onclick="closeDeleteModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text);margin:0">Are you sure you want to delete this assignment?</p>
+      <p style="color:var(--slate);font-size:.85rem;margin:.5rem 0 0">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDeleteAsg()"><i class="fas fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="<?= APP_URL ?>/frontend/assets/js/pages/instructor/assignments.js?v=<?= $assignmentsJsVersion ?>"></script>
 <?php layout_footer(); ?>

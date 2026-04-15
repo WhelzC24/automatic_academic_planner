@@ -24,7 +24,57 @@ $log  = [];
 echo "\n[" . $now . "] BISU Planner Cron Scheduler Running...\n";
 
 // ──────────────────────────────────────────────────────────
-// 1. AUTO-MARK OVERDUE TASKS
+// 1. AUTO-GENERATE TASKS FROM ASSIGNMENTS
+// ──────────────────────────────────────────────────────────
+$generatedTasks = $db->exec(
+    "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority, status)
+     SELECT e.student_id,
+            a.assignment_id,
+            CONCAT('Submit: ', a.title),
+            a.description,
+            a.due_at,
+            CASE
+                WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 24 THEN 'Urgent'
+                WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 72 THEN 'High'
+                WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 168 THEN 'Medium'
+                ELSE 'Low'
+            END,
+            CASE WHEN a.due_at < NOW() THEN 'Overdue' ELSE 'Pending' END
+     FROM assignments a
+     JOIN course_offerings co ON co.offering_id = a.offering_id
+     JOIN enrollments e ON e.offering_id = co.offering_id
+     LEFT JOIN tasks t ON t.user_id = e.student_id AND t.assignment_id = a.assignment_id
+     WHERE t.task_id IS NULL"
+);
+echo "[TASK] Auto-generated assignment tasks: created = $generatedTasks\n";
+
+// ──────────────────────────────────────────────────────────
+// 2. SYNC LINKED TASK DETAILS WITH ASSIGNMENTS
+// ──────────────────────────────────────────────────────────
+$syncedTasks = $db->exec(
+    "UPDATE tasks t
+     JOIN assignments a ON a.assignment_id = t.assignment_id
+     SET t.task_name = CONCAT('Submit: ', a.title),
+         t.description = a.description,
+         t.due_at = a.due_at,
+         t.priority = CASE
+             WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 24 THEN 'Urgent'
+             WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 72 THEN 'High'
+             WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 168 THEN 'Medium'
+             ELSE 'Low'
+         END,
+         t.status = CASE
+             WHEN t.status = 'Completed' THEN t.status
+             WHEN a.due_at < NOW() THEN 'Overdue'
+             WHEN t.status = 'Overdue' AND a.due_at >= NOW() THEN 'Pending'
+             ELSE t.status
+         END
+     WHERE t.assignment_id IS NOT NULL"
+);
+echo "[TASK] Synced linked assignment tasks: updated = $syncedTasks\n";
+
+// ──────────────────────────────────────────────────────────
+// 3. AUTO-MARK OVERDUE TASKS
 // ──────────────────────────────────────────────────────────
 $stmt = $db->exec(
     "UPDATE tasks SET status = 'Overdue'
@@ -33,7 +83,7 @@ $stmt = $db->exec(
 echo "[TASK] Marked overdue tasks: affected rows = $stmt\n";
 
 // ──────────────────────────────────────────────────────────
-// 2. DEADLINE REMINDER NOTIFICATIONS
+// 4. DEADLINE REMINDER NOTIFICATIONS
 // ──────────────────────────────────────────────────────────
 $intervals = [
     '3 days'   => 'DATE(due_at) = DATE(NOW() + INTERVAL 3 DAY)',
@@ -64,7 +114,7 @@ foreach ($intervals as $label => $condition) {
 }
 
 // ──────────────────────────────────────────────────────────
-// 3. SCHEDULE REMINDERS (1 hour before)
+// 5. SCHEDULE REMINDERS (1 hour before)
 // ──────────────────────────────────────────────────────────
 $schedRem = $db->exec("
     INSERT IGNORE INTO notifications (user_id, schedule_id, type, message)
@@ -85,7 +135,7 @@ $schedRem = $db->exec("
 echo "[NOTIF] Schedule reminders (1hr): sent = $schedRem\n";
 
 // ──────────────────────────────────────────────────────────
-// 4. LOG CRON EXECUTION
+// 6. LOG CRON EXECUTION
 // ──────────────────────────────────────────────────────────
 $db->prepare(
     "INSERT INTO system_logs (user_id, action, description, ip_address)
