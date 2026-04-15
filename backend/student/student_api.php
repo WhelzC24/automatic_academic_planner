@@ -33,16 +33,16 @@ switch ($action) {
         $stmt2 = $db->prepare(
             "SELECT a.assignment_id, a.title, a.due_at, c.title as course_title, c.code,
                     co.section, co.term,
-                    (SELECT submission_id FROM submissions s
-                     WHERE s.assignment_id = a.assignment_id AND s.student_id = :uid) as submitted
+                (SELECT submission_id FROM submissions s
+                 WHERE s.assignment_id = a.assignment_id AND s.student_id = :uid_sub) as submitted
              FROM assignments a
              JOIN course_offerings co ON co.offering_id = a.offering_id
              JOIN courses c ON c.course_id = co.course_id
-             JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = :uid
+             JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = :uid_enroll
              WHERE a.due_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
              ORDER BY a.due_at"
         );
-        $stmt2->execute([':uid' => $uid]);
+        $stmt2->execute([':uid_sub' => $uid, ':uid_enroll' => $uid]);
         $upcoming = $stmt2->fetchAll();
 
         // Unread notification count
@@ -64,6 +64,12 @@ switch ($action) {
             'unread_notif'=> (int)$unread,
             'task_stats'  => $taskStats,
         ]);
+        break;
+
+    case 'get_unread_notif_count':
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM notifications WHERE user_id=:uid AND read_at IS NULL");
+        $stmt->execute([':uid' => $uid]);
+        jsonResponse(true, 'OK', ['unread_notif' => (int)$stmt->fetch()['cnt']]);
         break;
 
     // ── TASKS ──────────────────────────────────────────────
@@ -138,7 +144,7 @@ switch ($action) {
         $end   = $_GET['end']   ?? date('Y-m-t');
         $stmt  = $db->prepare(
             "SELECT * FROM schedules
-             WHERE user_id=:uid AND starts_at >= :s AND ends_at <= :e
+             WHERE user_id=:uid AND starts_at <= :e AND ends_at >= :s
              ORDER BY starts_at"
         );
         $stmt->execute([':uid'=>$uid, ':s'=>$start, ':e'=>$end]);
@@ -188,12 +194,12 @@ switch ($action) {
              FROM assignments a
              JOIN course_offerings co ON co.offering_id = a.offering_id
              JOIN courses c ON c.course_id = co.course_id
-             JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = :uid
+             JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = :uid_enroll
              JOIN users u ON u.user_id = a.created_by
-             LEFT JOIN submissions sub ON sub.assignment_id = a.assignment_id AND sub.student_id = :uid
+             LEFT JOIN submissions sub ON sub.assignment_id = a.assignment_id AND sub.student_id = :uid_sub
              ORDER BY a.due_at"
         );
-        $stmt->execute([':uid' => $uid]);
+        $stmt->execute([':uid_enroll' => $uid, ':uid_sub' => $uid]);
         jsonResponse(true, 'OK', ['assignments' => $stmt->fetchAll()]);
         break;
 
