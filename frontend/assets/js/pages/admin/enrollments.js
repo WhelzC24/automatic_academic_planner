@@ -1,5 +1,6 @@
 const API = BASE_URL + '/backend/admin/admin_api.php';
 let allEnrollments = [];
+let pendingUnenrollId = null;
 
 async function init() {
   const res = await fetch(API + '?action=get_courses');
@@ -82,7 +83,8 @@ function filterTable() {
   }
   el.innerHTML = `<table><thead><tr>
     <th>Student</th><th>Student No.</th><th>Program</th>
-    <th>Course</th><th>Section</th><th>Term</th><th>Enrolled</th><th>Action</th>
+    <th>Course</th><th>Section</th><th>Term</th><th>Enrolled</th>
+    <th>Action</th>
   </tr></thead><tbody>
   ${filtered.map((e, idx) => `<tr data-idx="${idx}">
     <td><div style="font-weight:600">${e.first_name} ${e.last_name}</div></td>
@@ -93,10 +95,20 @@ function filterTable() {
     <td style="font-size:.82rem;color:var(--slate)">${e.term || '—'}</td>
     <td style="font-size:.78rem;color:var(--slate)">${e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString('en-PH') : '—'}</td>
     <td>
-      ${e.enrollment_id ? `<button class="btn btn-sm btn-danger" onclick="unenroll(${e.enrollment_id})" title="Remove enrollment"><i class="fas fa-user-minus"></i></button>` : ''}
+      ${e.enrollment_id ? `<button class="btn btn-sm btn-danger" onclick="openUnenrollModal(${e.enrollment_id})" title="Remove enrollment"><i class="fas fa-user-minus"></i></button>` : ''}
     </td>
   </tr>`).join('')}
   </tbody></table>`;
+}
+
+function openUnenrollModal(enrollmentId) {
+  pendingUnenrollId = enrollmentId;
+  document.getElementById('unenroll-modal').classList.add('show');
+}
+
+function closeUnenrollModal() {
+  pendingUnenrollId = null;
+  document.getElementById('unenroll-modal').classList.remove('show');
 }
 
 function populateOfferingFilter(courses) {
@@ -144,16 +156,38 @@ async function doEnroll() {
   if (data.success) {
     toast(data.message);
     closeEnroll();
-    await loadEnrollmentsFallback();
+    await loadEnrollments();
   } else {
     toast(data.message, 'error');
   }
 }
 
-async function unenroll(enrollmentId) {
-  if (!confirm('Remove this student enrollment? The student will lose access to this course.')) return;
-  toast('Unenroll feature: add DELETE FROM enrollments WHERE enrollment_id = ? in admin_api.php', 'warning');
+async function confirmUnenroll() {
+  if (!pendingUnenrollId) return;
+
+  const fd = new FormData();
+  fd.append('action', 'unenroll_student');
+  fd.append('enrollment_id', pendingUnenrollId);
+
+  const btn = document.getElementById('confirm-unenroll-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+
+  const res = await fetch(API, { method: 'POST', body: fd });
+  const data = await res.json();
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-user-minus"></i> Remove Enrollment';
+
+  if (data.success) {
+    closeUnenrollModal();
+    toast(data.message || 'Student unenrolled successfully.');
+    await loadEnrollments();
+  } else {
+    toast(data.message || 'Unable to remove enrollment.', 'error');
+  }
 }
+
 
 function exportCSV() {
   const rows = [['Student', 'Student No.', 'Program', 'Course', 'Section', 'Term', 'Enrolled Date']];

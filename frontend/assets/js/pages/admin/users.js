@@ -2,6 +2,7 @@ const API = BASE_URL + '/backend/admin/admin_api.php';
 const CURRENT_USER_ID = window.CURRENT_USER_ID || 0;
 let currentRole = '';
 let pendingReset = null;
+let pendingDeleteUser = null;
 
 function setRole(role, btn) {
   currentRole = role;
@@ -131,13 +132,34 @@ async function toggleUser(id) {
 }
 
 async function deleteUser(id, name) {
-  if (!confirm(`Delete user \"${name}\"? This cannot be undone.`)) return;
+  pendingDeleteUser = { id, name };
+  document.getElementById('delete-user-name').textContent = name;
+  document.getElementById('delete-user-modal').classList.add('show');
+}
+
+function closeDeleteUserModal() {
+  pendingDeleteUser = null;
+  document.getElementById('delete-user-modal').classList.remove('show');
+}
+
+async function confirmDeleteUser() {
+  if (!pendingDeleteUser) return;
+
   const fd = new FormData();
   fd.append('action', 'delete_user');
-  fd.append('user_id', id);
+  fd.append('user_id', pendingDeleteUser.id);
+
+  const btn = document.getElementById('confirm-delete-user-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
   const res = await fetch(API, { method: 'POST', body: fd });
   const data = await res.json();
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-trash"></i> Delete User';
+
   if (data.success) {
+    closeDeleteUserModal();
     toast('User deleted.');
     loadUsers();
   } else {
