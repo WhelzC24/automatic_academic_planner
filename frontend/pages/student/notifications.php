@@ -4,47 +4,67 @@ requireAuth('student');
 require_once __DIR__ . '/../layout.php';
 layout_header('Notifications', 'student');
 ?>
-<div style="display:flex;min-height:100vh;">
-<?php layout_sidebar('student','notifications'); ?>
-<div class="main-content">
-  <div class="topbar">
-    <div class="topbar-title"><h1>Notifications</h1><p>Stay updated with your academic activities</p></div>
-    <div class="topbar-actions">
-      <button class="btn btn-outline btn-sm" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+<div class="app-shell">
+  <?php layout_sidebar('student', 'notifications'); ?>
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h1>Notifications</h1>
+        <p>Stay updated with your academic activities</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-outline btn-sm" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+      </div>
     </div>
-  </div>
-  <div class="page-content">
-    <div class="card">
-      <div class="card-body" style="padding:0">
-        <div id="notif-list"><div style="text-align:center;padding:3rem"><span class="spinner"></span></div></div>
+    <div class="page-content">
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <div id="notif-list">
+            <div style="text-align:center;padding:3rem"><span class="spinner"></span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-</div>
 
 <script>
-const API = BASE_URL + '/backend/student/student_api.php';
+  const API = BASE_URL + '/backend/student/student_api.php';
 
-const typeIcon = {
-  'Deadline Reminder':      {icon:'clock',color:'#f97316'},
-  'Assignment Posted':      {icon:'file-alt',color:'#3b82f6'},
-  'Submission Confirmation':{icon:'check-circle',color:'#22c55e'},
-  'Schedule Reminder':      {icon:'calendar-alt',color:'#8b5cf6'},
-};
+  const typeIcon = {
+    'Deadline Reminder': {
+      icon: 'clock',
+      color: '#f97316'
+    },
+    'Assignment Posted': {
+      icon: 'file-alt',
+      color: '#3b82f6'
+    },
+    'Submission Confirmation': {
+      icon: 'check-circle',
+      color: '#22c55e'
+    },
+    'Schedule Reminder': {
+      icon: 'calendar-alt',
+      color: '#8b5cf6'
+    },
+  };
 
-async function loadNotifications() {
-  const res  = await fetch(API + '?action=get_notifications');
-  const data = await res.json();
-  const el   = document.getElementById('notif-list');
-  if (!data.notifications.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fas fa-bell-slash"></i><p>No notifications yet.</p></div>';
-    return;
-  }
-  el.innerHTML = data.notifications.map(n => {
-    const t = typeIcon[n.type] || {icon:'bell',color:'var(--slate)'};
-    const unread = !n.read_at;
-    return `<div class="notif-item" id="notif-${n.notification_id}" style="
+  async function loadNotifications() {
+    const res = await fetch(API + '?action=get_notifications');
+    const data = await res.json();
+    const el = document.getElementById('notif-list');
+    if (!data.notifications.length) {
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-bell-slash"></i><p>No notifications yet.</p></div>';
+      return;
+    }
+    el.innerHTML = data.notifications.map(n => {
+      const t = typeIcon[n.type] || {
+        icon: 'bell',
+        color: 'var(--slate)'
+      };
+      const unread = !n.read_at;
+      return `<div class="notif-item" id="notif-${n.notification_id}" style="
         display:flex;align-items:flex-start;gap:1rem;
         padding:1rem 1.5rem;
         border-bottom:1px solid var(--border);
@@ -65,26 +85,32 @@ async function loadNotifications() {
         </div>
       </div>
     </div>`;
-  }).join('');
-}
+    }).join('');
+  }
 
-async function markRead(id) {
-  const el = document.getElementById('notif-' + id);
-  if (el) el.style.background = 'var(--white)';
-  const fd = new FormData();
-  fd.append('action','mark_notification_read');
-  fd.append('notification_id', id);
-  await fetch(API, {method:'POST', body:fd});
-}
+  async function markRead(id) {
+    const el = document.getElementById('notif-' + id);
+    if (el) el.style.background = 'var(--white)';
+    const fd = new FormData();
+    fd.append('action', 'mark_notification_read');
+    fd.append('notification_id', id);
+    await fetch(API, {
+      method: 'POST',
+      body: fd
+    });
+  }
 
-async function markAllRead() {
-  const fd = new FormData();
-  fd.append('action','mark_all_read');
-  await fetch(API, {method:'POST', body:fd});
-  toast('All notifications marked as read.');
+  async function markAllRead() {
+    const fd = new FormData();
+    fd.append('action', 'mark_all_read');
+    await fetch(API, {
+      method: 'POST',
+      body: fd
+    });
+    toast('All notifications marked as read.');
+    loadNotifications();
+  }
+
   loadNotifications();
-}
-
-loadNotifications();
 </script>
 <?php layout_footer(); ?>

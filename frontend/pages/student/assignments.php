@@ -5,15 +5,20 @@ require_once __DIR__ . '/../layout.php';
 layout_header('Assignments', 'student');
 ?>
 <div class="app-shell">
-<?php layout_sidebar('student','assignments'); ?>
-<div class="main-content">
-  <div class="topbar">
-    <div class="topbar-title"><h1>Assignments</h1><p>View and submit your course assignments</p></div>
+  <?php layout_sidebar('student', 'assignments'); ?>
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">
+        <h1>Assignments</h1>
+        <p>View and submit your course assignments</p>
+      </div>
+    </div>
+    <div class="page-content">
+      <div id="assignments-list">
+        <div style="text-align:center;padding:3rem"><span class="spinner"></span></div>
+      </div>
+    </div>
   </div>
-  <div class="page-content">
-    <div id="assignments-list"><div style="text-align:center;padding:3rem"><span class="spinner"></span></div></div>
-  </div>
-</div>
 </div>
 
 <!-- Submit Modal -->
@@ -40,42 +45,43 @@ layout_header('Assignments', 'student');
 </div>
 
 <script>
-const API = BASE_URL + '/backend/student/student_api.php';
+  const API = BASE_URL + '/backend/student/student_api.php';
 
-function dueColor(due) {
-  const diff = (new Date(due) - Date.now()) / 86400000;
-  if (diff < 0)  return '#ef4444';
-  if (diff < 1)  return '#f97316';
-  if (diff <= 3) return '#f97316';
-  return 'var(--slate)';
-}
-function dueText(due) {
-  const d = new Date(due);
-  const diff = Math.round((d - Date.now()) / 86400000);
-  if (diff < 0)  return 'Overdue!';
-  if (diff === 0) return 'Due today!';
-  if (diff === 1) return 'Due tomorrow';
-  return `Due in ${diff} days`;
-}
-
-async function loadAssignments() {
-  const res  = await fetch(API + '?action=get_assignments');
-  const data = await res.json();
-  const el   = document.getElementById('assignments-list');
-  if (!data.assignments.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>No assignments found. You may not be enrolled in any courses yet.</p></div>';
-    return;
+  function dueColor(due) {
+    const diff = (new Date(due) - Date.now()) / 86400000;
+    if (diff < 0) return '#ef4444';
+    if (diff < 1) return '#f97316';
+    if (diff <= 3) return '#f97316';
+    return 'var(--slate)';
   }
 
-  // Group by course
-  const grouped = {};
-  data.assignments.forEach(a => {
-    const key = `${a.code} — ${a.course_title} (${a.section})`;
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(a);
-  });
+  function dueText(due) {
+    const d = new Date(due);
+    const diff = Math.round((d - Date.now()) / 86400000);
+    if (diff < 0) return 'Overdue!';
+    if (diff === 0) return 'Due today!';
+    if (diff === 1) return 'Due tomorrow';
+    return `Due in ${diff} days`;
+  }
 
-  el.innerHTML = Object.entries(grouped).map(([course, items]) => `
+  async function loadAssignments() {
+    const res = await fetch(API + '?action=get_assignments');
+    const data = await res.json();
+    const el = document.getElementById('assignments-list');
+    if (!data.assignments.length) {
+      el.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>No assignments found. You may not be enrolled in any courses yet.</p></div>';
+      return;
+    }
+
+    // Group by course
+    const grouped = {};
+    data.assignments.forEach(a => {
+      const key = `${a.code} — ${a.course_title} (${a.section})`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(a);
+    });
+
+    el.innerHTML = Object.entries(grouped).map(([course, items]) => `
     <div class="card" style="margin-bottom:1.5rem;">
       <div class="card-header" style="background:var(--navy);border-radius:12px 12px 0 0;">
         <div class="card-title" style="color:var(--white)"><i class="fas fa-book-open" style="color:var(--gold)"></i> ${course}</div>
@@ -113,36 +119,48 @@ async function loadAssignments() {
       }).join('')}
       </div>
     </div>`).join('');
-}
+  }
 
-function openSubmit(aid, title) {
-  document.getElementById('submit-aid').value = aid;
-  document.getElementById('submit-asg-title').textContent = title;
-  document.getElementById('submit-file').value = '';
-  document.getElementById('submit-modal').classList.add('show');
-}
-function closeSubmit() { document.getElementById('submit-modal').classList.remove('show'); }
+  function openSubmit(aid, title) {
+    document.getElementById('submit-aid').value = aid;
+    document.getElementById('submit-asg-title').textContent = title;
+    document.getElementById('submit-file').value = '';
+    document.getElementById('submit-modal').classList.add('show');
+  }
 
-async function doSubmit() {
-  const aid  = document.getElementById('submit-aid').value;
-  const file = document.getElementById('submit-file').files[0];
-  if (!file) { toast('Please select a file.','error'); return; }
-  const fd = new FormData();
-  fd.append('action','submit_assignment');
-  fd.append('assignment_id', aid);
-  fd.append('submission_file', file);
-  const btn = document.querySelector('#submit-modal .btn-primary');
-  btn.innerHTML = '<span class="spinner"></span> Uploading...';
-  btn.disabled  = true;
-  const res  = await fetch(API, {method:'POST', body:fd});
-  const data = await res.json();
-  btn.innerHTML = '<i class="fas fa-upload"></i> Submit';
-  btn.disabled  = false;
-  if (data.success) { toast(data.message); closeSubmit(); loadAssignments(); }
-  else toast(data.message, 'error');
-}
+  function closeSubmit() {
+    document.getElementById('submit-modal').classList.remove('show');
+  }
 
-loadAssignments();
-loadNotifCount();
+  async function doSubmit() {
+    const aid = document.getElementById('submit-aid').value;
+    const file = document.getElementById('submit-file').files[0];
+    if (!file) {
+      toast('Please select a file.', 'error');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('action', 'submit_assignment');
+    fd.append('assignment_id', aid);
+    fd.append('submission_file', file);
+    const btn = document.querySelector('#submit-modal .btn-primary');
+    btn.innerHTML = '<span class="spinner"></span> Uploading...';
+    btn.disabled = true;
+    const res = await fetch(API, {
+      method: 'POST',
+      body: fd
+    });
+    const data = await res.json();
+    btn.innerHTML = '<i class="fas fa-upload"></i> Submit';
+    btn.disabled = false;
+    if (data.success) {
+      toast(data.message);
+      closeSubmit();
+      loadAssignments();
+    } else toast(data.message, 'error');
+  }
+
+  loadAssignments();
+  loadNotifCount();
 </script>
 <?php layout_footer(); ?>
