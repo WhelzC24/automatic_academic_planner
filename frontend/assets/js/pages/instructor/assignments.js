@@ -1,5 +1,6 @@
 const API = BASE_URL + '/backend/instructor/instructor_api.php';
 let offerings = [];
+let pendingDeleteId = null;
 
 async function loadOfferings() {
   const res = await fetch(API + '?action=get_my_offerings');
@@ -45,12 +46,22 @@ async function loadAssignments() {
       <td>
         <div style="display:flex;gap:.4rem">
           <button class="btn btn-sm btn-outline" onclick="viewSubs(${a.assignment_id},'${a.title.replace(/'/g, "\\'")}',${a.max_score})"><i class="fas fa-list"></i> Submissions</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteAsg(${a.assignment_id})"><i class="fas fa-trash"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${a.assignment_id})"><i class="fas fa-trash"></i></button>
         </div>
       </td>
     </tr>`;
   }).join('')}
   </tbody></table>`;
+}
+
+function openDeleteModal(id) {
+  pendingDeleteId = id;
+  document.getElementById('delete-modal').classList.add('show');
+}
+
+function closeDeleteModal() {
+  pendingDeleteId = null;
+  document.getElementById('delete-modal').classList.remove('show');
 }
 
 function openModal() {
@@ -95,15 +106,16 @@ async function saveAssignment() {
   }
 }
 
-async function deleteAsg(id) {
-  if (!confirm('Delete this assignment?')) return;
+async function confirmDeleteAsg() {
+  if (!pendingDeleteId) return;
   const fd = new FormData();
   fd.append('action', 'delete_assignment');
-  fd.append('assignment_id', id);
+  fd.append('assignment_id', pendingDeleteId);
   const res = await fetch(API, { method: 'POST', body: fd });
   const data = await res.json();
   if (data.success) {
     toast('Assignment deleted.');
+    closeDeleteModal();
     loadAssignments();
   } else {
     toast(data.message, 'error');
