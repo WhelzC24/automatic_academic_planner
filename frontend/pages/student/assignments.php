@@ -4,7 +4,7 @@ requireAuth('student');
 require_once __DIR__ . '/../layout.php';
 layout_header('Assignments', 'student');
 ?>
-<div style="display:flex;min-height:100vh;">
+<div class="app-shell">
 <?php layout_sidebar('student','assignments'); ?>
 <div class="main-content">
   <div class="topbar">
