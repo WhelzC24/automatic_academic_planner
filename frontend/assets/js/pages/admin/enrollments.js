@@ -1,15 +1,19 @@
 const API = BASE_URL + '/backend/admin/admin_api.php';
 let allEnrollments = [];
 let pendingUnenrollId = null;
+let allOfferings = [];
 
 async function init() {
-  const res = await fetch(API + '?action=get_courses');
-  const data = await res.json();
-
-  await fetch(API + '?action=get_offering_list');
-  populateOfferingFilter(data.courses || []);
+  await loadOfferings();
   await loadEnrollments();
   await populateEnrollModal();
+}
+
+async function loadOfferings() {
+  const res = await fetch(API + '?action=get_offering_list');
+  const data = await res.json();
+  allOfferings = data.offerings || [];
+  populateOfferingFilter(allOfferings);
 }
 
 async function loadEnrollments() {
@@ -113,16 +117,48 @@ function closeUnenrollModal() {
 
 function populateOfferingFilter(courses) {
   const sel = document.getElementById('filter-offering');
+  const uniqueOfferings = new Map();
+  courses.forEach(offering => {
+    uniqueOfferings.set(offering.offering_id, offering);
+  });
   sel.innerHTML = '<option value="">All Offerings</option>' +
-    courses.map(c => `<option value="${c.course_id}">${c.code} — ${c.title}</option>`).join('');
+    [...uniqueOfferings.values()].map(offering => {
+      const instructor = offering.first_name ? ` • ${offering.first_name} ${offering.last_name}` : '';
+      return `<option value="${offering.offering_id}">${offering.code} — ${offering.title} (${offering.section}, ${offering.term})${instructor}</option>`;
+    }).join('');
 }
 
 async function populateEnrollModal() {
-  const oRes = await fetch(API + '?action=get_courses');
-  const oData = await oRes.json();
-  document.getElementById('e-offering').innerHTML =
-    '<option value="">Select offering...</option>' +
-    (oData.courses || []).map(c => `<option value="${c.course_id}">${c.code} — ${c.title}</option>`).join('');
+  const courseSel = document.getElementById('e-course');
+  const sectionSel = document.getElementById('e-section');
+  const uniqueCourses = new Map();
+  allOfferings.forEach(offering => {
+    if (!uniqueCourses.has(offering.course_id)) {
+      uniqueCourses.set(offering.course_id, {
+        course_id: offering.course_id,
+        code: offering.code,
+        title: offering.title,
+      });
+    }
+  });
+
+  courseSel.innerHTML = '<option value="">Select course...</option>' +
+    [...uniqueCourses.values()].map(course => `<option value="${course.course_id}">${course.code} — ${course.title}</option>`).join('');
+
+  sectionSel.innerHTML = '<option value="">Select section...</option>';
+  sectionSel.disabled = true;
+
+  courseSel.onchange = () => {
+    const courseId = courseSel.value;
+    const sections = allOfferings.filter(offering => String(offering.course_id) === String(courseId));
+    sectionSel.innerHTML = '<option value="">Select section...</option>' +
+      sections.map(offering => {
+        const instructor = offering.first_name ? ` • ${offering.first_name} ${offering.last_name}` : '';
+        const room = offering.room ? ` • Room ${offering.room}` : '';
+        return `<option value="${offering.offering_id}">${offering.section} • ${offering.term}${room}${instructor}</option>`;
+      }).join('');
+    sectionSel.disabled = !sections.length;
+  };
 
   const sRes = await fetch(API + '?action=get_users&role=student');
   const sData = await sRes.json();
@@ -140,10 +176,10 @@ function closeEnroll() {
 }
 
 async function doEnroll() {
-  const offeringId = document.getElementById('e-offering').value;
+  const offeringId = document.getElementById('e-section').value;
   const studentId = document.getElementById('e-student').value;
   if (!offeringId || !studentId) {
-    toast('Please select both offering and student.', 'error');
+    toast('Please select course, section, and student.', 'error');
     return;
   }
 
