@@ -40,15 +40,16 @@ bisu_planner/
         ├── layout.php                 ← Shared sidebar + header + footer
         ├── student/
         │   ├── dashboard.php          ← Student dashboard
-        │   ├── tasks.php              ← Task manager
+        │   ├── tasks.php              ← Assignment-linked task tracker
         │   ├── assignments.php        ← View & submit assignments
-        │   ├── planner.php            ← Daily planner + schedule
+        │   ├── planner.php            ← Personal schedules + read-only class/events tab
         │   ├── schedule.php           ← Weekly/monthly schedule view
         │   └── notifications.php     ← Notification center
         ├── instructor/
         │   ├── dashboard.php          ← Instructor dashboard
         │   ├── courses.php            ← My course offerings
         │   ├── assignments.php        ← Create & manage assignments
+        │   ├── schedules.php          ← Class schedule + published events manager
         │   └── submissions.php        ← View & grade submissions
         └── admin/
             ├── dashboard.php          ← Admin overview + stats
@@ -103,7 +104,8 @@ uploads/
 └── submissions/   ← auto-created on first submission
 ```
 
-On Linux/Mac: `chmod -R 755 uploads/`
+On Linux/Mac: make sure the web server user can write to `uploads/` and `uploads/submissions/`.
+If you are developing locally, `chmod -R 775 uploads/` is usually enough; some setups may require ownership or broader permissions.
 
 ### Step 6 — Access the Application
 
@@ -138,11 +140,11 @@ Open your browser → `http://localhost/bisu_planner`
 ### 👨‍🎓 STUDENT
 | Feature | Description |
 |---------|-------------|
-| Dashboard | Today's tasks, upcoming deadlines, quick-add task, notification count |
-| Tasks | Add/edit/delete personal tasks with priority (Low/Medium/High/Urgent) and status |
+| Dashboard | Today's tasks, upcoming deadlines, notification count, quick task completion |
+| Tasks | Assignment-linked task tracker with status updates |
 | Assignments | View all course assignments, submit files, check grades & feedback |
-| Planner | Calendar view with click-to-day schedule management |
-| Schedule | Weekly grid view + monthly list of class/study/meeting schedules |
+| Planner | Personal schedules plus read-only class schedules and instructor events |
+| Schedule | Weekly grid view + monthly list of class/study/meeting/exam/activity/quiz/presentation schedules |
 | Notifications | Deadline reminders (3-day, 1-day, due-day), new assignment alerts, submission confirmations |
 
 ### 👨‍🏫 INSTRUCTOR
@@ -150,7 +152,8 @@ Open your browser → `http://localhost/bisu_planner`
 |---------|-------------|
 | Dashboard | Course overview, recent submissions |
 | My Courses | View assigned course offerings with details |
-| Assignments | Create assignments with description/due date/max score; auto-notifies enrolled students |
+| Assignments | Create assignments with description/due date/max score; auto-notifies enrolled students and syncs planner tasks |
+| Schedules | Edit class schedule details and publish exams, activities, quizzes, and presentations |
 | Submissions | View all submissions per assignment; download files; grade with feedback |
 
 ### 🛠 ADMIN
@@ -175,10 +178,10 @@ Open your browser → `http://localhost/bisu_planner`
 | `course_offerings` | Specific course sections per term |
 | `enrollments` | Student-to-offering relationships |
 | `teaching_assignments` | Instructor-to-offering relationships |
-| `assignments` | Tasks created by instructors for course offerings |
+| `assignments` | Coursework created by instructors for course offerings |
 | `submissions` | Student file submissions for assignments |
-| `tasks` | Personal planner tasks (student-created) |
-| `schedules` | Calendar events (class, study, personal, meeting) |
+| `tasks` | Assignment-linked planner tasks for students |
+| `schedules` | Calendar events (class, study, personal, meeting, exam, activity, quiz, presentation) |
 | `notifications` | System-generated alerts (deadline, assignment, submission) |
 | `system_logs` | Audit trail of all system actions |
 
@@ -205,12 +208,18 @@ Open your browser → `http://localhost/bisu_planner`
 - ✅ On the due date
 - Triggered automatically on each login
 
+### Assignment Task Sync (Auto)
+- Assignment-linked planner tasks are created automatically for enrolled students
+- Task details stay in sync when assignments are updated
+- Submitting an assignment marks the linked planner task as completed or overdue
+
 ### Overdue Task Detection (Auto)
 - Tasks past their due date are automatically marked `Overdue`
 - Runs on every student login
 
 ### Assignment Notifications (Auto)
 - When instructor creates an assignment → all enrolled students receive a notification instantly
+- When instructor publishes an event in the Schedules page → students can see it in the read-only planner tab
 
 ---
 
@@ -220,17 +229,15 @@ Open your browser → `http://localhost/bisu_planner`
 | Action | Method | Description |
 |--------|--------|-------------|
 | `get_dashboard` | GET | Dashboard data (tasks, deadlines, stats) |
-| `get_tasks` | GET | List tasks (filter: all/today/pending/overdue) |
-| `add_task` | POST | Create new task |
-| `update_task` | POST | Edit task |
-| `delete_task` | POST | Delete task |
+| `get_tasks` | GET | Assignment-linked tasks for the student |
 | `mark_task_status` | POST | Quick status update |
 | `get_schedules` | GET | Get schedules for date range |
 | `add_schedule` | POST | Add schedule event |
-| `delete_schedule` | POST | Delete schedule |
+| `get_readonly_schedules` | GET | Student view of class schedules and instructor events |
 | `get_assignments` | GET | All course assignments with submission status |
 | `submit_assignment` | POST | Upload file submission |
 | `get_notifications` | GET | All notifications |
+| `get_unread_notif_count` | GET | Unread notification badge count |
 | `mark_notification_read` | POST | Mark one as read |
 | `mark_all_read` | POST | Mark all as read |
 
@@ -238,13 +245,15 @@ Open your browser → `http://localhost/bisu_planner`
 | Action | Method | Description |
 |--------|--------|-------------|
 | `get_dashboard` | GET | Offerings + recent submissions |
-| `get_my_assignments` | GET | All assignments I created |
+| `get_my_offerings` | GET | All course offerings assigned to the instructor |
 | `create_assignment` | POST | New assignment (auto-notifies students) |
 | `update_assignment` | POST | Edit assignment |
 | `delete_assignment` | POST | Delete assignment |
 | `get_submissions` | GET | Submissions for specific assignment |
 | `grade_submission` | POST | Save grade + feedback |
-| `get_my_offerings` | GET | My course offerings |
+| `update_offering_schedule` | POST | Update class schedule and room for an offering |
+| `create_offering_event` | POST | Publish an exam/activity/quiz/presentation to enrolled students |
+| `get_offering_events` | GET | List published events per offering |
 
 ### Admin API (`backend/admin/admin_api.php`)
 | Action | Method | Description |
@@ -290,7 +299,7 @@ Open your browser → `http://localhost/bisu_planner`
 ### Student Workflow
 1. Register or login with admin-created account
 2. View dashboard → see today's tasks and upcoming deadlines
-3. Add personal tasks / study schedules
+3. Add personal schedules and review instructor-published class events in the planner
 4. View assignments → upload submissions before deadline
 5. Check notifications for reminders and updates
 6. View grades and instructor feedback
