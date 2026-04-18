@@ -173,7 +173,7 @@ CREATE TABLE schedules (
     description TEXT,
     starts_at   DATETIME NOT NULL,
     ends_at     DATETIME NOT NULL,
-    type        ENUM('Class','Study','Personal','Meeting') NOT NULL DEFAULT 'Personal',
+    type        ENUM('Class','Study','Personal','Meeting','Exam','Activity','Quiz','Presentation') NOT NULL DEFAULT 'Personal',
     color       VARCHAR(7) DEFAULT '#4f46e5',
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
