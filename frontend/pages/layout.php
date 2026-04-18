@@ -47,6 +47,7 @@ function layout_sidebar(string $role, string $activePage = ''): void
     $navItems = [
       ['icon' => 'tachometer-alt', 'label' => 'Dashboard',  'page' => 'dashboard',  'url' => APP_URL . '/frontend/pages/instructor/dashboard.php'],
       ['icon' => 'book-open',      'label' => 'My Courses', 'page' => 'courses',    'url' => APP_URL . '/frontend/pages/instructor/courses.php'],
+      ['icon' => 'calendar-alt',   'label' => 'Schedules',  'page' => 'schedules',  'url' => APP_URL . '/frontend/pages/instructor/schedules.php'],
       ['icon' => 'clipboard-list', 'label' => 'Assignments', 'page' => 'assignments', 'url' => APP_URL . '/frontend/pages/instructor/assignments.php'],
       ['icon' => 'upload',         'label' => 'Submissions', 'page' => 'submissions', 'url' => APP_URL . '/frontend/pages/instructor/submissions.php'],
       ['icon' => 'user-circle',    'label' => 'My Profile', 'page' => 'profile',    'url' => APP_URL . '/frontend/pages/profile.php'],
