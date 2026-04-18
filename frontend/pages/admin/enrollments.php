@@ -123,9 +123,15 @@ layout_header('Enrollment Management', 'admin');
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Course Offering *</label>
-        <select class="form-control" id="e-offering">
-          <option value="">Select offering...</option>
+        <label>Course *</label>
+        <select class="form-control" id="e-course">
+          <option value="">Select course...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Section *</label>
+        <select class="form-control" id="e-section" disabled>
+          <option value="">Select section...</option>
         </select>
       </div>
       <div class="form-group">

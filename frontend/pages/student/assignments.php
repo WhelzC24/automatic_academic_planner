@@ -73,52 +73,91 @@ layout_header('Assignments', 'student');
       return;
     }
 
-    // Group by course
-    const grouped = {};
-    data.assignments.forEach(a => {
-      const key = `${a.code} — ${a.course_title} (${a.section})`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(a);
-    });
+    const isCompleted = (assignment) => Boolean(assignment.sub_status);
 
-    el.innerHTML = Object.entries(grouped).map(([course, items]) => `
-    <div class="card" style="margin-bottom:1.5rem;">
-      <div class="card-header" style="background:var(--navy);border-radius:12px 12px 0 0;">
-        <div class="card-title" style="color:var(--white)"><i class="fas fa-book-open" style="color:var(--gold)"></i> ${course}</div>
-      </div>
-      <div class="card-body" style="padding:0">
-      ${items.map(a => {
-        const color = dueColor(a.due_at);
-        const subStatus = a.sub_status || null;
-        return `<div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
-          <div style="flex:1;min-width:200px">
-            <div style="font-weight:700;font-size:1rem;margin-bottom:.25rem">${a.title}</div>
-            <div style="color:var(--slate);font-size:.82rem;margin-bottom:.5rem">${a.description ? a.description.substring(0,120)+'...' : 'No description.'}</div>
-            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-              <span style="color:${color};font-size:.8rem;font-weight:600"><i class="fas fa-clock"></i>
-                ${new Date(a.due_at).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-                — ${dueText(a.due_at)}
-              </span>
-              <span style="color:var(--slate);font-size:.78rem">
-                <i class="fas fa-user"></i> ${a.first_name} ${a.last_name}
-              </span>
-            </div>
-            ${a.grade!==null ? `<div style="margin-top:.5rem;font-weight:700;color:var(--green)"><i class="fas fa-star"></i> Grade: ${a.grade}/100
-              ${a.feedback ? `<span style="color:var(--slate);font-weight:400;font-size:.8rem"> — "${a.feedback}"</span>` : ''}</div>` : ''}
+    const groupByCourse = (items) => {
+      const grouped = {};
+      items.forEach(a => {
+        const key = `${a.code} — ${a.course_title} (${a.section})`;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(a);
+      });
+      return grouped;
+    };
+
+    const renderAssignmentRows = (items, completedMode) => items.map(a => {
+      const color = dueColor(a.due_at);
+      const subStatus = a.sub_status || null;
+      return `<div style="padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:.25rem">${a.title}</div>
+          <div style="color:var(--slate);font-size:.82rem;margin-bottom:.5rem">${a.description ? a.description.substring(0,120)+'...' : 'No description.'}</div>
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <span style="color:${color};font-size:.8rem;font-weight:600"><i class="fas fa-clock"></i>
+              ${new Date(a.due_at).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+              — ${dueText(a.due_at)}
+            </span>
+            <span style="color:var(--slate);font-size:.78rem">
+              <i class="fas fa-user"></i> ${a.first_name} ${a.last_name}
+            </span>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            ${subStatus
-              ? `<span class="badge badge-${subStatus}" style="font-size:.8rem;padding:5px 12px">${subStatus.charAt(0).toUpperCase()+subStatus.slice(1)}</span>
-                 <div style="color:var(--slate);font-size:.72rem;margin-top:.3rem">Submitted ${new Date(a.submitted_at).toLocaleDateString('en-PH')}</div>`
-              : `<button class="btn btn-primary" onclick="openSubmit(${a.assignment_id},'${a.title.replace(/'/g,"\\'")}')">
-                   <i class="fas fa-upload"></i> Submit
-                 </button>`
-            }
-          </div>
-        </div>`;
-      }).join('')}
+          ${a.grade!==null ? `<div style="margin-top:.5rem;font-weight:700;color:var(--green)"><i class="fas fa-star"></i> Grade: ${a.grade}/100
+            ${a.feedback ? `<span style="color:var(--slate);font-weight:400;font-size:.8rem"> — "${a.feedback}"</span>` : ''}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${completedMode && subStatus
+            ? `<span class="badge badge-${subStatus}" style="font-size:.8rem;padding:5px 12px">${subStatus.charAt(0).toUpperCase()+subStatus.slice(1)}</span>
+               <div style="color:var(--slate);font-size:.72rem;margin-top:.3rem">Submitted ${new Date(a.submitted_at).toLocaleDateString('en-PH')}</div>`
+            : `<button class="btn btn-primary" onclick="openSubmit(${a.assignment_id},'${a.title.replace(/'/g,"\\'")}')">
+                 <i class="fas fa-upload"></i> Submit
+               </button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+
+    const renderCourseCards = (grouped, completedMode) => Object.entries(grouped).map(([course, items]) => `
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header" style="background:var(--navy);border-radius:12px 12px 0 0;">
+          <div class="card-title" style="color:var(--white)"><i class="fas fa-book-open" style="color:var(--gold)"></i> ${course}</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          ${renderAssignmentRows(items, completedMode)}
+        </div>
       </div>
-    </div>`).join('');
+    `).join('');
+
+    const activeAssignments = data.assignments.filter(a => !isCompleted(a));
+    const completedAssignments = data.assignments.filter(isCompleted);
+
+    const activeGrouped = groupByCourse(activeAssignments);
+    const completedGrouped = groupByCourse(completedAssignments);
+
+    const activeHtml = activeAssignments.length ?
+      renderCourseCards(activeGrouped, false) :
+      '<div class="empty-state"><i class="fas fa-inbox"></i><p>No active assignments right now.</p></div>';
+
+    const completedHtml = completedAssignments.length ?
+      renderCourseCards(completedGrouped, true) :
+      '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No completed assignments yet.</p></div>';
+
+    el.innerHTML = `
+      <div style="margin-bottom:2rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem">
+          <h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:1.25rem">Active Assignments</h2>
+          <span class="badge" style="background:var(--deep)22;color:var(--deep)">${activeAssignments.length}</span>
+        </div>
+        ${activeHtml}
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem">
+          <h2 style="font-family:'Playfair Display',serif;color:var(--navy);font-size:1.25rem">Completed</h2>
+          <span class="badge" style="background:var(--green)22;color:var(--green)">${completedAssignments.length}</span>
+        </div>
+        ${completedHtml}
+      </div>
+    `;
   }
 
   function openSubmit(aid, title) {
