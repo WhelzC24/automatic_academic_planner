@@ -12,10 +12,77 @@ $action = $_REQUEST['action'] ?? '';
 $db = getDB();
 $uid = (int)$_SESSION['user_id'];
 
+function getTaskPriorityFromDueAt(string $dueAt): string
+{
+    $hoursUntilDue = (strtotime($dueAt) - time()) / 3600;
+    if ($hoursUntilDue <= 24) {
+        return 'Urgent';
+    }
+    if ($hoursUntilDue <= 72) {
+        return 'High';
+    }
+    if ($hoursUntilDue <= 168) {
+        return 'Medium';
+    }
+    return 'Low';
+}
+
+function syncAssignmentTasksForStudent(PDO $db, int $studentId): void
+{
+    // Create missing assignment-linked tasks for this student.
+    $insertMissing = $db->prepare(
+        "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority, status)
+         SELECT e.student_id,
+                a.assignment_id,
+                CONCAT('Submit: ', a.title),
+                a.description,
+                a.due_at,
+                CASE
+                    WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 24 THEN 'Urgent'
+                    WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 72 THEN 'High'
+                    WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 168 THEN 'Medium'
+                    ELSE 'Low'
+                END,
+                CASE WHEN a.due_at < NOW() THEN 'Overdue' ELSE 'Pending' END
+         FROM assignments a
+         JOIN course_offerings co ON co.offering_id = a.offering_id
+         JOIN enrollments e ON e.offering_id = co.offering_id
+         LEFT JOIN tasks t ON t.user_id = e.student_id AND t.assignment_id = a.assignment_id
+         WHERE e.student_id = :uid AND t.task_id IS NULL"
+    );
+    $insertMissing->execute([':uid' => $studentId]);
+
+    // Keep linked task metadata in sync with assignment updates.
+    $syncLinked = $db->prepare(
+        "UPDATE tasks t
+         JOIN assignments a ON a.assignment_id = t.assignment_id
+         JOIN course_offerings co ON co.offering_id = a.offering_id
+         JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = t.user_id
+         SET t.task_name = CONCAT('Submit: ', a.title),
+             t.description = a.description,
+             t.due_at = a.due_at,
+             t.priority = CASE
+                 WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 24 THEN 'Urgent'
+                 WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 72 THEN 'High'
+                 WHEN TIMESTAMPDIFF(HOUR, NOW(), a.due_at) <= 168 THEN 'Medium'
+                 ELSE 'Low'
+             END,
+             t.status = CASE
+                 WHEN t.status = 'Completed' THEN t.status
+                 WHEN a.due_at < NOW() THEN 'Overdue'
+                 WHEN t.status = 'Overdue' AND a.due_at >= NOW() THEN 'Pending'
+                 ELSE t.status
+             END
+         WHERE t.user_id = :uid AND t.assignment_id IS NOT NULL"
+    );
+    $syncLinked->execute([':uid' => $studentId]);
+}
+
 switch ($action) {
 
     // ── DASHBOARD DATA ─────────────────────────────────────
     case 'get_dashboard':
+        syncAssignmentTasksForStudent($db, $uid);
         autoMarkOverdue();
         generateDeadlineNotifications();
 
@@ -75,6 +142,7 @@ switch ($action) {
     // ── TASKS ─────────────────────────────────────────────
     // Tasks are auto-generated from assignments via cron jobs
     case 'get_tasks':
+        syncAssignmentTasksForStudent($db, $uid);
         $sql = "SELECT t.*, a.title as assignment_title
                 FROM tasks t LEFT JOIN assignments a ON a.assignment_id = t.assignment_id
                 WHERE t.user_id = :uid AND t.assignment_id IS NOT NULL
@@ -105,7 +173,99 @@ switch ($action) {
         jsonResponse(true, 'OK', ['schedules' => $stmt->fetchAll()]);
         break;
 
-    // Schedules are auto-generated from course offerings
+    case 'get_readonly_schedules':
+        $offeringsStmt = $db->prepare(
+            "SELECT co.offering_id,
+                    co.schedule,
+                    co.room,
+                    co.section,
+                    co.term,
+                    c.code as course_code,
+                    c.title as course_title,
+                    u.first_name,
+                    u.last_name
+             FROM enrollments e
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             JOIN courses c ON c.course_id = co.course_id
+             LEFT JOIN teaching_assignments ta ON ta.offering_id = co.offering_id
+             LEFT JOIN users u ON u.user_id = ta.instructor_id
+             WHERE e.student_id = :uid
+             ORDER BY co.term DESC, c.code"
+        );
+        $offeringsStmt->execute([':uid' => $uid]);
+
+        $eventsStmt = $db->prepare(
+            "SELECT schedule_id,
+                    title,
+                    description,
+                    starts_at,
+                    ends_at,
+                    type,
+                    color
+             FROM schedules
+             WHERE user_id = :uid
+               AND type IN ('Exam','Activity','Quiz','Presentation')
+             ORDER BY starts_at"
+        );
+        $eventsStmt->execute([':uid' => $uid]);
+
+        jsonResponse(true, 'OK', [
+            'offerings' => $offeringsStmt->fetchAll(),
+            'events' => $eventsStmt->fetchAll(),
+        ]);
+        break;
+
+    case 'add_schedule':
+        $title = trim($_POST['title'] ?? '');
+        $desc = trim($_POST['description'] ?? '');
+        $startsAtInput = trim($_POST['starts_at'] ?? '');
+        $endsAtInput = trim($_POST['ends_at'] ?? '');
+        $type = trim($_POST['type'] ?? 'Personal');
+        $color = trim($_POST['color'] ?? '#4f46e5');
+
+        if ($title === '' || $startsAtInput === '' || $endsAtInput === '') {
+            jsonResponse(false, 'Title, start time, and end time are required.');
+        }
+
+        $allowedTypes = ['Class', 'Study', 'Personal', 'Meeting'];
+        if (!in_array($type, $allowedTypes, true)) {
+            $type = 'Personal';
+        }
+
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+            $color = '#4f46e5';
+        }
+
+        $startsAtTs = strtotime($startsAtInput);
+        $endsAtTs = strtotime($endsAtInput);
+        if (!$startsAtTs || !$endsAtTs) {
+            jsonResponse(false, 'Invalid date/time format.');
+        }
+        if ($endsAtTs <= $startsAtTs) {
+            jsonResponse(false, 'End time must be later than start time.');
+        }
+
+        $startsAt = date('Y-m-d H:i:s', $startsAtTs);
+        $endsAt = date('Y-m-d H:i:s', $endsAtTs);
+
+        $ins = $db->prepare(
+            "INSERT INTO schedules (user_id, title, description, starts_at, ends_at, type, color)
+             VALUES (:uid, :title, :description, :starts_at, :ends_at, :type, :color)"
+        );
+        $ins->execute([
+            ':uid' => $uid,
+            ':title' => $title,
+            ':description' => $desc !== '' ? $desc : null,
+            ':starts_at' => $startsAt,
+            ':ends_at' => $endsAt,
+            ':type' => $type,
+            ':color' => $color,
+        ]);
+
+        jsonResponse(true, 'Schedule added successfully.');
+        break;
+
+    // Class schedules may be generated from course offerings
     // ── ASSIGNMENTS ────────────────────────────────────────
     case 'get_assignments':
         $stmt = $db->prepare(
@@ -132,7 +292,7 @@ switch ($action) {
 
         // Student can only submit assignments from offerings they are enrolled in
         $asgChk = $db->prepare(
-            "SELECT a.due_at
+            "SELECT a.title, a.description, a.due_at
              FROM assignments a
              JOIN course_offerings co ON co.offering_id = a.offering_id
              JOIN enrollments e ON e.offering_id = co.offering_id
@@ -146,6 +306,9 @@ switch ($action) {
         }
 
         $file     = $_FILES['submission_file'];
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            jsonResponse(false, 'Upload failed before saving the file.');
+        }
         $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $allowed  = ['pdf', 'doc', 'docx', 'txt', 'zip', 'png', 'jpg', 'jpeg'];
         if (!in_array($ext, $allowed)) jsonResponse(false, 'File type not allowed.');
@@ -153,7 +316,12 @@ switch ($action) {
         if ($file['size'] > 10 * 1024 * 1024) jsonResponse(false, 'File size must not exceed 10MB.');
 
         $dir = UPLOAD_DIR . "submissions/$uid/";
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            jsonResponse(false, 'Unable to create the submission folder.');
+        }
+        if (!is_writable($dir)) {
+            jsonResponse(false, 'Submission folder is not writable.');
+        }
         $filename = uniqid("sub_{$asgId}_") . ".$ext";
         if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) {
             jsonResponse(false, 'Failed to upload file. Please try again.');
@@ -165,10 +333,42 @@ switch ($action) {
 
         $ins = $db->prepare(
             "INSERT INTO submissions (assignment_id, student_id, file_path, status)
-             VALUES (:aid, :sid, :fp, :st)
-             ON DUPLICATE KEY UPDATE file_path=:fp, status=:st, submitted_at=NOW()"
+             VALUES (:aid, :sid, :fp_insert, :st_insert)
+             ON DUPLICATE KEY UPDATE file_path=:fp_update, status=:st_update, submitted_at=NOW()"
         );
-        $ins->execute([':aid' => $asgId, ':sid' => $uid, ':fp' => $filePath, ':st' => $status]);
+        $ins->execute([
+            ':aid' => $asgId,
+            ':sid' => $uid,
+            ':fp_insert' => $filePath,
+            ':st_insert' => $status,
+            ':fp_update' => $filePath,
+            ':st_update' => $status,
+        ]);
+
+        // Keep linked planner task aligned with submission status.
+        $taskStatus = ($status === 'late') ? 'Overdue' : 'Completed';
+        $taskUpdate = $db->prepare(
+            "UPDATE tasks
+             SET status = :task_status
+             WHERE user_id = :uid AND assignment_id = :aid"
+        );
+        $taskUpdate->execute([':task_status' => $taskStatus, ':uid' => $uid, ':aid' => $asgId]);
+
+        if ($taskUpdate->rowCount() === 0) {
+            $taskInsert = $db->prepare(
+                "INSERT INTO tasks (user_id, assignment_id, task_name, description, due_at, priority, status)
+                 VALUES (:uid, :aid, :task_name, :task_desc, :due_at, :prio, :task_status)"
+            );
+            $taskInsert->execute([
+                ':uid' => $uid,
+                ':aid' => $asgId,
+                ':task_name' => 'Submit: ' . $asg['title'],
+                ':task_desc' => $asg['description'],
+                ':due_at' => $asg['due_at'],
+                ':prio' => getTaskPriorityFromDueAt($asg['due_at']),
+                ':task_status' => $taskStatus,
+            ]);
+        }
 
         // Confirmation notification
         $notif = $db->prepare(

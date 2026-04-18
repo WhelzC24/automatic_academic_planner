@@ -264,6 +264,150 @@ switch ($action) {
         jsonResponse(true, 'OK', ['offerings' => $stmt->fetchAll()]);
         break;
 
+    case 'update_offering_schedule':
+        $offeringId = (int)($_POST['offering_id'] ?? 0);
+        $schedule = trim($_POST['schedule'] ?? '');
+        $room = trim($_POST['room'] ?? '');
+
+        if (!$offeringId) {
+            jsonResponse(false, 'Invalid offering.');
+        }
+
+        $owning = $db->prepare(
+            "SELECT ta_id
+             FROM teaching_assignments
+             WHERE offering_id = :oid AND instructor_id = :uid
+             LIMIT 1"
+        );
+        $owning->execute([':oid' => $offeringId, ':uid' => $uid]);
+        if (!$owning->fetch()) {
+            jsonResponse(false, 'Unauthorized.');
+        }
+
+        $upd = $db->prepare(
+            "UPDATE course_offerings
+             SET schedule = :schedule,
+                 room = :room
+             WHERE offering_id = :oid"
+        );
+        $upd->execute([
+            ':schedule' => $schedule,
+            ':room' => $room,
+            ':oid' => $offeringId,
+        ]);
+
+        jsonResponse(true, 'Offering schedule updated.');
+        break;
+
+    case 'create_offering_event':
+        $offeringId = (int)($_POST['offering_id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $startsAtInput = trim($_POST['starts_at'] ?? '');
+        $endsAtInput = trim($_POST['ends_at'] ?? '');
+        $type = trim($_POST['type'] ?? 'Exam');
+        $color = trim($_POST['color'] ?? '#1e3a5f');
+
+        if (!$offeringId || $title === '' || $startsAtInput === '' || $endsAtInput === '') {
+            jsonResponse(false, 'Required fields missing.');
+        }
+
+        $validTypes = ['Exam', 'Activity', 'Quiz', 'Presentation', 'Meeting'];
+        if (!in_array($type, $validTypes, true)) {
+            $type = 'Exam';
+        }
+
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+            $color = '#1e3a5f';
+        }
+
+        $startsAtTs = strtotime($startsAtInput);
+        $endsAtTs = strtotime($endsAtInput);
+        if (!$startsAtTs || !$endsAtTs || $endsAtTs <= $startsAtTs) {
+            jsonResponse(false, 'Please provide a valid time range.');
+        }
+
+        $ownsOffering = $db->prepare(
+            "SELECT ta_id
+             FROM teaching_assignments
+             WHERE offering_id = :oid AND instructor_id = :uid
+             LIMIT 1"
+        );
+        $ownsOffering->execute([':oid' => $offeringId, ':uid' => $uid]);
+        if (!$ownsOffering->fetch()) {
+            jsonResponse(false, 'Unauthorized.');
+        }
+
+        $studentsStmt = $db->prepare(
+            "SELECT e.student_id
+             FROM enrollments e
+             WHERE e.offering_id = :oid"
+        );
+        $studentsStmt->execute([':oid' => $offeringId]);
+        $students = $studentsStmt->fetchAll();
+
+        if (!$students) {
+            jsonResponse(false, 'No enrolled students found for this offering.');
+        }
+
+        $startsAt = date('Y-m-d H:i:s', $startsAtTs);
+        $endsAt = date('Y-m-d H:i:s', $endsAtTs);
+
+        $scheduleInsert = $db->prepare(
+            "INSERT INTO schedules (user_id, title, description, starts_at, ends_at, type, color)
+             VALUES (:uid, :title, :description, :starts_at, :ends_at, :type, :color)"
+        );
+        $notifInsert = $db->prepare(
+            "INSERT INTO notifications (user_id, schedule_id, type, message)
+             VALUES (:uid, :sid, 'Schedule Reminder', :msg)"
+        );
+
+        $created = 0;
+        foreach ($students as $student) {
+            $scheduleInsert->execute([
+                ':uid' => (int)$student['student_id'],
+                ':title' => $title,
+                ':description' => $description !== '' ? $description : null,
+                ':starts_at' => $startsAt,
+                ':ends_at' => $endsAt,
+                ':type' => $type,
+                ':color' => $color,
+            ]);
+            $scheduleId = (int)$db->lastInsertId();
+            $notifInsert->execute([
+                ':uid' => (int)$student['student_id'],
+                ':sid' => $scheduleId,
+                ':msg' => "New $type scheduled: $title on " . date('M d, Y h:i A', $startsAtTs),
+            ]);
+            $created++;
+        }
+
+        logAction('CREATE_SCHEDULE_EVENT', "$type '$title' scheduled for offering ID $offeringId");
+        jsonResponse(true, "Schedule event created for $created students.");
+        break;
+
+    case 'get_offering_events':
+        $stmt = $db->prepare(
+            "SELECT MIN(s.schedule_id) as schedule_id,
+                    s.title,
+                    s.description,
+                    s.starts_at,
+                    s.ends_at,
+                    s.type,
+                    s.color,
+                    COUNT(*) as student_count
+             FROM schedules s
+             JOIN enrollments e ON e.student_id = s.user_id
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
+             WHERE s.type IN ('Exam','Activity','Quiz','Presentation','Meeting')
+             GROUP BY s.title, s.description, s.starts_at, s.ends_at, s.type, s.color
+             ORDER BY s.starts_at DESC"
+        );
+        $stmt->execute([':uid' => $uid]);
+        jsonResponse(true, 'OK', ['events' => $stmt->fetchAll()]);
+        break;
+
     default:
         jsonResponse(false, 'Invalid action.');
 }
