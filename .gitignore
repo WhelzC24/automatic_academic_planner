@@ -1,4 +1,6 @@
 /docs
-
+temporary_notes.md
+testing_credentials.md
 /uploads/*
 !/uploads/.htaccess
+/.playwright-cli
