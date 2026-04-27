@@ -211,10 +211,45 @@ switch ($action) {
         $desc  = trim($_POST['description'] ?? '');
         $units = (int)($_POST['units'] ?? 3);
         if (!$code || !$title) jsonResponse(false, 'Code and title are required.');
+        if ($units < 1 || $units > 6) jsonResponse(false, 'Units must be between 1 and 6.');
         try {
             $db->prepare("INSERT INTO courses (code,title,description,units) VALUES(:c,:t,:d,:u)")
                 ->execute([':c' => $code, ':t' => $title, ':d' => $desc, ':u' => $units]);
             jsonResponse(true, 'Course added.', ['course_id' => $db->lastInsertId()]);
+        } catch (Exception $e) {
+            jsonResponse(false, 'Course code already exists.');
+        }
+        break;
+
+    case 'update_course':
+        $courseId = (int)($_POST['course_id'] ?? 0);
+        $code     = strtoupper(trim($_POST['code'] ?? ''));
+        $title    = trim($_POST['title'] ?? '');
+        $desc     = trim($_POST['description'] ?? '');
+        $units    = (int)($_POST['units'] ?? 3);
+
+        if (!$courseId) jsonResponse(false, 'Invalid course ID.');
+        if (!$code || !$title) jsonResponse(false, 'Code and title are required.');
+        if ($units < 1 || $units > 6) jsonResponse(false, 'Units must be between 1 and 6.');
+
+        $exists = $db->prepare("SELECT course_id FROM courses WHERE course_id = :id LIMIT 1");
+        $exists->execute([':id' => $courseId]);
+        if (!$exists->fetch()) jsonResponse(false, 'Course not found.');
+
+        try {
+            $db->prepare(
+                "UPDATE courses
+                 SET code = :c, title = :t, description = :d, units = :u
+                 WHERE course_id = :id"
+            )->execute([
+                ':c' => $code,
+                ':t' => $title,
+                ':d' => $desc,
+                ':u' => $units,
+                ':id' => $courseId,
+            ]);
+            logAction('UPDATE_COURSE', "Updated course ID $courseId ($code)");
+            jsonResponse(true, 'Course updated successfully.');
         } catch (Exception $e) {
             jsonResponse(false, 'Course code already exists.');
         }
@@ -236,6 +271,63 @@ switch ($action) {
                 ->execute([':oid' => $offeringId, ':iid' => $instrId]);
         }
         jsonResponse(true, 'Course offering created.', ['offering_id' => $offeringId]);
+        break;
+
+    case 'update_offering':
+        $offeringId = (int)($_POST['offering_id'] ?? 0);
+        $courseId   = (int)($_POST['course_id'] ?? 0);
+        $term       = trim($_POST['term'] ?? '');
+        $section    = trim($_POST['section'] ?? '');
+        $schedule   = trim($_POST['schedule'] ?? '');
+        $room       = trim($_POST['room'] ?? '');
+        $instrId    = (int)($_POST['instructor_id'] ?? 0);
+
+        if (!$offeringId) jsonResponse(false, 'Invalid offering ID.');
+        if (!$courseId || !$term || !$section) jsonResponse(false, 'Required fields missing.');
+
+        $stmt = $db->prepare("SELECT offering_id FROM course_offerings WHERE offering_id = :id LIMIT 1");
+        $stmt->execute([':id' => $offeringId]);
+        if (!$stmt->fetch()) jsonResponse(false, 'Offering not found.');
+
+        if ($instrId > 0) {
+            $ins = $db->prepare("SELECT user_id FROM instructors WHERE user_id = :id LIMIT 1");
+            $ins->execute([':id' => $instrId]);
+            if (!$ins->fetch()) jsonResponse(false, 'Selected instructor is invalid.');
+        }
+
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                "UPDATE course_offerings
+                 SET course_id = :cid,
+                     term = :t,
+                     section = :s,
+                     schedule = :sch,
+                     room = :r
+                 WHERE offering_id = :oid"
+            )->execute([
+                ':cid' => $courseId,
+                ':t' => $term,
+                ':s' => $section,
+                ':sch' => $schedule,
+                ':r' => $room,
+                ':oid' => $offeringId,
+            ]);
+
+            $db->prepare("DELETE FROM teaching_assignments WHERE offering_id = :oid")
+                ->execute([':oid' => $offeringId]);
+            if ($instrId > 0) {
+                $db->prepare("INSERT INTO teaching_assignments (offering_id, instructor_id) VALUES(:oid, :iid)")
+                    ->execute([':oid' => $offeringId, ':iid' => $instrId]);
+            }
+
+            $db->commit();
+            logAction('UPDATE_OFFERING', "Updated offering ID $offeringId");
+            jsonResponse(true, 'Offering updated successfully.');
+        } catch (Exception $e) {
+            $db->rollBack();
+            jsonResponse(false, 'Failed to update offering.');
+        }
         break;
 
     case 'enroll_student':
@@ -283,8 +375,9 @@ switch ($action) {
 
     case 'get_offering_list':
         $offerings = $db->query(
-            "SELECT co.offering_id, co.term, co.section, co.schedule, co.room,
+            "SELECT co.offering_id, co.course_id, co.term, co.section, co.schedule, co.room,
                     c.code, c.title,
+                    ta.instructor_id,
                     u.first_name, u.last_name,
                     (SELECT COUNT(*) FROM enrollments e WHERE e.offering_id = co.offering_id) as student_count
              FROM course_offerings co
@@ -299,9 +392,39 @@ switch ($action) {
     case 'delete_course':
         $courseId = (int)($_POST['course_id'] ?? 0);
         if (!$courseId) jsonResponse(false, 'Invalid course.');
+
+        $offeringCountStmt = $db->prepare("SELECT COUNT(*) AS c FROM course_offerings WHERE course_id = :id");
+        $offeringCountStmt->execute([':id' => $courseId]);
+        $offeringCount = (int)$offeringCountStmt->fetch()['c'];
+
+        $enrollmentCountStmt = $db->prepare(
+            "SELECT COUNT(*) AS c
+             FROM enrollments e
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             WHERE co.course_id = :id"
+        );
+        $enrollmentCountStmt->execute([':id' => $courseId]);
+        $enrollmentCount = (int)$enrollmentCountStmt->fetch()['c'];
+
+        if ($offeringCount > 0 || $enrollmentCount > 0) {
+            logAction('DELETE_COURSE_BLOCKED', "Blocked deletion for course ID $courseId due to dependencies.");
+            jsonResponse(false, 'Cannot delete course with existing offerings or enrollments.');
+        }
+
         $db->prepare("DELETE FROM courses WHERE course_id = :id")->execute([':id' => $courseId]);
         logAction('DELETE_COURSE', "Deleted course ID $courseId");
         jsonResponse(true, 'Course deleted.');
+        break;
+
+    case 'delete_offering':
+        $offeringId = (int)($_POST['offering_id'] ?? 0);
+        if (!$offeringId) jsonResponse(false, 'Invalid offering.');
+
+        $db->prepare("DELETE FROM enrollments WHERE offering_id = :id")->execute([':id' => $offeringId]);
+        $db->prepare("DELETE FROM teaching_assignments WHERE offering_id = :id")->execute([':id' => $offeringId]);
+        $db->prepare("DELETE FROM course_offerings WHERE offering_id = :id")->execute([':id' => $offeringId]);
+        logAction('DELETE_OFFERING', "Deleted offering ID $offeringId");
+        jsonResponse(true, 'Offering deleted.');
         break;
 
     case 'assign_instructor':
