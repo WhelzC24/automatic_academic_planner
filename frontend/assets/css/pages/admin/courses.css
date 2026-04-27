@@ -34,24 +34,82 @@
   justify-content: flex-start;
 }
 
-#courses-list .courses-table {
+#courses-list .courses-table,
+#offerings-list .courses-table {
   width: 100%;
   table-layout: fixed;
 }
 
 #courses-list .courses-table th,
-#courses-list .courses-table td {
+#courses-list .courses-table td,
+#offerings-list .courses-table th,
+#offerings-list .courses-table td {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
   vertical-align: top;
+  padding: 0.75rem 0.5rem;
 }
 
+#courses-list .courses-table th,
+#offerings-list .courses-table th {
+  background: #e2e8f0;
+  font-weight: 700;
+  color: #334155;
+  text-align: center;
+}
+
+#courses-list .courses-table th,
+#offerings-list .courses-table th {
+  background: #e2e8f0 !important;
+}
+
+#courses-list .courses-table th,
+#offerings-list .courses-table th {
+  background: #e2e8f0;
+  font-weight: 700;
+  color: #334155;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+}
+
+#courses-list .courses-table th:nth-child(1),
+#courses-list .courses-table td:nth-child(1) { width: 8%; }
+#courses-list .courses-table th:nth-child(2),
+#courses-list .courses-table td:nth-child(2) { width: 22%; }
+#courses-list .courses-table th:nth-child(3),
+#courses-list .courses-table td:nth-child(3) { width: 6%; }
+#courses-list .courses-table th:nth-child(4),
+#courses-list .courses-table td:nth-child(4) { width: 10%; }
+#courses-list .courses-table th:nth-child(5),
+#courses-list .courses-table td:nth-child(5) { width: 42%; }
+#courses-list .courses-table th:nth-child(6),
+#courses-list .courses-table td:nth-child(6) { width: 12%; }
+
+#offerings-list .courses-table th:nth-child(1),
+#offerings-list .courses-table td:nth-child(1) { width: 18%; }
+#offerings-list .courses-table th:nth-child(2),
+#offerings-list .courses-table td:nth-child(2) { width: 16%; }
+#offerings-list .courses-table th:nth-child(3),
+#offerings-list .courses-table td:nth-child(3) { width: 10%; }
+#offerings-list .courses-table th:nth-child(4),
+#offerings-list .courses-table td:nth-child(4) { width: 14%; }
+#offerings-list .courses-table th:nth-child(5),
+#offerings-list .courses-table td:nth-child(5) { width: 12%; }
+#offerings-list .courses-table th:nth-child(6),
+#offerings-list .courses-table td:nth-child(6) { width: 12%; }
+#offerings-list .courses-table th:nth-child(7),
+#offerings-list .courses-table td:nth-child(7) { width: 8%; }
+#offerings-list .courses-table th:nth-child(8),
+#offerings-list .courses-table td:nth-child(8) { width: 10%; }
+
 #courses-list .courses-table .badge {
+  display: block;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.2;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
