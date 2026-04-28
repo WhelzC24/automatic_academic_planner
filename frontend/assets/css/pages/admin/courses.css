@@ -111,6 +111,7 @@
   background: #f8f9fa;
   border-left: 4px solid var(--primary);
   border-radius: 0.375rem;
+  overflow: hidden;
 }
 
 .group-heading {
@@ -129,29 +130,36 @@
   font-size: 0.85rem;
 }
 
-.grouped-courses-table {
-  width: 100%;
-  table-layout: auto;
-  background: white;
-  border-radius: 0.375rem;
-  overflow: hidden;
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.grouped-courses-table th:nth-child(1) { width: auto; }
-.grouped-courses-table th:nth-child(2) { width: auto; }
-.grouped-courses-table th:nth-child(3) { width: auto; }
+.grouped-courses-table {
+  width: 100%;
+  table-layout: fixed;
+  background: white;
+  border-radius: 0.375rem;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.grouped-courses-table th:nth-child(1) { width: 140px; }
+.grouped-courses-table th:nth-child(2) { width: 1fr; }
+.grouped-courses-table th:nth-child(3) { width: 100px; }
 
 .grouped-courses-table th {
   background: #e2e8f0;
   font-weight: 700;
   color: #334155;
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
   text-align: left;
   border-bottom: 1px solid #cbd5e1;
+  white-space: nowrap;
 }
 
 .grouped-courses-table td {
-  padding: 0.75rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: top;
 }

@@ -494,15 +494,16 @@ layout_header('Course Management', 'admin');
       html += `
         <div class="curriculum-group">
           <div class="group-heading"><i class="fas fa-layer-group"></i> ${escHtml(groupHeading)}</div>
-          <table class="courses-table grouped-courses-table">
-            <thead>
-              <tr>
-                <th>Subject Code</th>
-                <th>Subject Description</th>
-                <th style="width:100px">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div class="table-wrapper">
+            <table class="courses-table grouped-courses-table">
+              <thead>
+                <tr>
+                  <th>Subject Code</th>
+                  <th>Subject Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               ${group.courses.map(c => {
                 const isEditing = Number(editingCourseId) === Number(c.course_id);
                 if (isEditing) {
@@ -534,8 +535,9 @@ layout_header('Course Management', 'admin');
                   </td>
                 </tr>`;
               }).join('')}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     });
