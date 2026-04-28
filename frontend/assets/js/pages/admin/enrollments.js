@@ -85,24 +85,28 @@ function filterTable() {
     el.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No enrollments found.</p></div>';
     return;
   }
-  el.innerHTML = `<table><thead><tr>
-    <th>Student</th><th>Student No.</th><th>Program</th>
-    <th>Course</th><th>Section</th><th>Term</th><th>Enrolled</th>
-    <th>Action</th>
-  </tr></thead><tbody>
-  ${filtered.map((e, idx) => `<tr data-idx="${idx}">
-    <td><div style="font-weight:600">${e.first_name} ${e.last_name}</div></td>
-    <td style="font-size:.85rem">${e.student_number || '—'}</td>
-    <td style="font-size:.82rem;color:var(--slate)">${e.program || '—'}</td>
-    <td style="font-size:.85rem">${e.course_code ? `<strong>${e.course_code}</strong> — ${e.course_title}` : '—'}</td>
-    <td style="font-size:.82rem">${e.section || '—'}</td>
-    <td style="font-size:.82rem;color:var(--slate)">${e.term || '—'}</td>
-    <td style="font-size:.78rem;color:var(--slate)">${e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString('en-PH') : '—'}</td>
-    <td>
-      ${e.enrollment_id ? `<button class="btn btn-sm btn-danger" onclick="openUnenrollModal(${e.enrollment_id})" title="Remove enrollment"><i class="fas fa-user-minus"></i></button>` : ''}
-    </td>
-  </tr>`).join('')}
-  </tbody></table>`;
+  el.innerHTML = `<div class="enrollment-table-wrap">
+    <table class="enrollment-table">
+      <thead><tr>
+        <th>Student</th><th>Student No.</th><th>Program</th>
+        <th>Course</th><th>Section</th><th>Term</th><th>Enrolled</th>
+        <th class="enrollment-action-col">Action</th>
+      </tr></thead><tbody>
+      ${filtered.map((e, idx) => `<tr data-idx="${idx}">
+        <td><div style="font-weight:600">${e.first_name} ${e.last_name}</div></td>
+        <td style="font-size:.85rem">${e.student_number || '—'}</td>
+        <td style="font-size:.82rem;color:var(--slate)">${e.program || '—'}</td>
+        <td style="font-size:.85rem">${e.course_code ? `<strong>${e.course_code}</strong> — ${e.course_title}` : '—'}</td>
+        <td style="font-size:.82rem">${e.section || '—'}</td>
+        <td style="font-size:.82rem;color:var(--slate)">${e.term || '—'}</td>
+        <td style="font-size:.78rem;color:var(--slate)">${e.enrolled_at ? new Date(e.enrolled_at).toLocaleDateString('en-PH') : '—'}</td>
+        <td class="enrollment-action-cell">
+          ${e.enrollment_id ? `<button class="btn btn-sm btn-danger" onclick="openUnenrollModal(${e.enrollment_id})" title="Remove enrollment"><i class="fas fa-user-minus"></i></button>` : ''}
+        </td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
 }
 
 function openUnenrollModal(enrollmentId) {
