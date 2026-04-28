@@ -51,44 +51,51 @@
 
 .enrollment-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 0;
   table-layout: fixed;
 }
 
 .enrollment-table th,
 .enrollment-table td {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+  line-height: 1.35;
 }
 
 .enrollment-table th:nth-child(1),
-.enrollment-table td:nth-child(1) { width: 18%; }
+.enrollment-table td:nth-child(1) { width: 15%; }
 
 .enrollment-table th:nth-child(2),
-.enrollment-table td:nth-child(2) { width: 11%; }
+.enrollment-table td:nth-child(2) { width: 10%; }
 
 .enrollment-table th:nth-child(3),
-.enrollment-table td:nth-child(3) { width: 14%; }
+.enrollment-table td:nth-child(3) { width: 15%; }
 
 .enrollment-table th:nth-child(4),
 .enrollment-table td:nth-child(4) {
   width: 24%;
-  white-space: normal;
 }
 
 .enrollment-table th:nth-child(5),
-.enrollment-table td:nth-child(5) { width: 10%; }
+.enrollment-table td:nth-child(5) { width: 12%; }
 
 .enrollment-table th:nth-child(6),
-.enrollment-table td:nth-child(6) { width: 10%; }
+.enrollment-table td:nth-child(6) { width: 12%; }
 
 .enrollment-table th:nth-child(7),
-.enrollment-table td:nth-child(7) { width: 11%; }
+.enrollment-table td:nth-child(7) { width: 12%; }
 
 .enrollment-action-col,
 .enrollment-action-cell {
-  width: 8%;
-  min-width: 92px;
+  width: 10%;
+  min-width: 84px;
   text-align: center;
+}
+
+.enrollment-action-col {
+  white-space: nowrap;
 }
 
 .enrollment-action-cell .btn {
@@ -107,6 +114,6 @@
   }
 
   .enrollment-table {
-    min-width: 1040px;
+    min-width: 0;
   }
 }
