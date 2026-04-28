@@ -467,44 +467,81 @@ layout_header('Course Management', 'admin');
       return;
     }
 
-    el.innerHTML = `<table class="courses-table"><thead><tr>
-    <th>Code</th><th>Title</th><th>Units</th><th>Offerings</th><th>Description</th><th>Actions</th>
-  </tr></thead><tbody>
-  ${courses.map(c => {
-    const isEditing = Number(editingCourseId) === Number(c.course_id);
-    if (isEditing) {
-      return `<tr>
-        <td data-label="Code"><input id="ec-code-${c.course_id}" class="form-control table-input" maxlength="20" value="${escHtml(c.code)}"></td>
-        <td data-label="Title"><input id="ec-title-${c.course_id}" class="form-control table-input" maxlength="150" value="${escHtml(c.title)}"></td>
-        <td data-label="Units" style="text-align:center"><input id="ec-units-${c.course_id}" class="form-control table-input table-input-sm" type="number" min="1" max="6" value="${Number(c.units || 3)}"></td>
-        <td data-label="Offerings" style="text-align:center"><span class="badge badge-submitted">${c.offering_count} offering${c.offering_count != 1 ? 's' : ''}</span></td>
-        <td data-label="Description"><textarea id="ec-desc-${c.course_id}" class="form-control table-input table-textarea">${escHtml(c.description || '')}</textarea></td>
-        <td data-label="Actions">
-          <div class="table-actions">
-            <button class="btn btn-sm btn-primary" onclick="saveCourseEdit(${c.course_id})"><i class="fas fa-save"></i></button>
-            <button class="btn btn-sm btn-outline" onclick="cancelCourseEdit()"><i class="fas fa-times"></i></button>
-          </div>
-        </td>
-      </tr>`;
-    }
+    // Group courses by year_level and semester
+    const groupedCourses = {};
+    courses.forEach(c => {
+      const key = `${c.year_level}-${c.semester}`;
+      if (!groupedCourses[key]) {
+        groupedCourses[key] = { year_level: c.year_level, semester: c.semester, courses: [] };
+      }
+      groupedCourses[key].courses.push(c);
+    });
 
-    return `<tr>
-      <td data-label="Code"><strong>${escHtml(c.code)}</strong></td>
-      <td data-label="Title">${escHtml(c.title)}</td>
-      <td data-label="Units" style="text-align:center">${Number(c.units || 0)}</td>
-      <td data-label="Offerings" style="text-align:center">
-        <span class="badge badge-submitted">${c.offering_count} offering${c.offering_count != 1 ? 's' : ''}</span>
-      </td>
-      <td data-label="Description" style="color:var(--slate);font-size:.82rem">${c.description ? escHtml(c.description.substring(0, 80)) + (c.description.length > 80 ? '...' : '') : '—'}</td>
-      <td data-label="Actions">
-        <div class="table-actions">
-          <button class="btn btn-sm btn-outline" onclick="startCourseEdit(${c.course_id})"><i class="fas fa-pen"></i></button>
-          <button class="btn btn-sm btn-danger" onclick="openDeleteCourseModal(${c.course_id})"><i class="fas fa-trash"></i></button>
+    // Define display order
+    const semesterPriority = { '1st Semester': 0, '2nd Semester': 1, 'Summer': 2 };
+    const sortedGroups = Object.values(groupedCourses).sort((a, b) => {
+      if (a.year_level !== b.year_level) return a.year_level - b.year_level;
+      return (semesterPriority[a.semester] ?? 99) - (semesterPriority[b.semester] ?? 99);
+    });
+
+    // Render grouped curriculum
+    let html = '<div class="curriculum-groups">';
+    
+    sortedGroups.forEach(group => {
+      const semesterDisplay = group.semester === 'Summer' ? `Sem S (Summer)` : `Sem ${group.semester === '1st Semester' ? 1 : 2}`;
+      const groupHeading = `Year ${group.year_level} – ${semesterDisplay}`;
+      
+      html += `
+        <div class="curriculum-group">
+          <div class="group-heading"><i class="fas fa-layer-group"></i> ${escHtml(groupHeading)}</div>
+          <table class="courses-table grouped-courses-table">
+            <thead>
+              <tr>
+                <th>Subject Code</th>
+                <th>Subject Description</th>
+                <th style="width:100px">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.courses.map(c => {
+                const isEditing = Number(editingCourseId) === Number(c.course_id);
+                if (isEditing) {
+                  return `<tr class="editing-row">
+                    <td data-label="Subject Code"><input id="ec-code-${c.course_id}" class="form-control table-input" maxlength="20" value="${escHtml(c.code)}"></td>
+                    <td data-label="Subject Description">
+                      <input id="ec-title-${c.course_id}" class="form-control table-input" maxlength="150" value="${escHtml(c.title)}">
+                      <textarea id="ec-desc-${c.course_id}" class="form-control table-input table-textarea" style="margin-top:0.35rem" placeholder="Description..."></textarea>
+                    </td>
+                    <td data-label="Actions">
+                      <div class="table-actions">
+                        <button class="btn btn-sm btn-primary" onclick="saveCourseEdit(${c.course_id})" title="Save"><i class="fas fa-save"></i></button>
+                        <button class="btn btn-sm btn-outline" onclick="cancelCourseEdit()" title="Cancel"><i class="fas fa-times"></i></button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }
+                return `<tr>
+                  <td data-label="Subject Code"><strong>${escHtml(c.code)}</strong></td>
+                  <td data-label="Subject Description">
+                    <div class="course-title">${escHtml(c.title)}</div>
+                    <div class="course-desc">${c.description ? escHtml(c.description) : '—'}</div>
+                  </td>
+                  <td data-label="Actions">
+                    <div class="table-actions">
+                      <button class="btn btn-sm btn-outline" onclick="startCourseEdit(${c.course_id})" title="Edit"><i class="fas fa-pen"></i></button>
+                      <button class="btn btn-sm btn-danger" onclick="openDeleteCourseModal(${c.course_id})" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
-      </td>
-    </tr>`;
-  }).join('')}
-  </tbody></table>`;
+      `;
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
   }
 
   async function loadOfferings() {

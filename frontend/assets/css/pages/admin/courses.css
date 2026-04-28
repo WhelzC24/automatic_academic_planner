@@ -96,7 +96,111 @@
   line-height: 1.2;
 }
 
+/* Curriculum Groups Display */
+.curriculum-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.curriculum-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-left: 4px solid var(--primary);
+  border-radius: 0.375rem;
+}
+
+.group-heading {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-heading i {
+  font-size: 0.85rem;
+}
+
+.grouped-courses-table {
+  width: 100%;
+  table-layout: auto;
+  background: white;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.grouped-courses-table th:nth-child(1) { width: 15%; }
+.grouped-courses-table th:nth-child(2) { width: 75%; }
+.grouped-courses-table th:nth-child(3) { width: 10%; }
+
+.grouped-courses-table th {
+  background: #e2e8f0;
+  font-weight: 700;
+  color: #334155;
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.grouped-courses-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.grouped-courses-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.grouped-courses-table .course-title {
+  font-weight: 500;
+  color: var(--navy);
+  margin-bottom: 0.25rem;
+}
+
+.grouped-courses-table .course-desc {
+  font-size: 0.82rem;
+  color: var(--slate);
+  line-height: 1.4;
+}
+
+.grouped-courses-table .editing-row {
+  background: #fef3c7;
+}
+
+.grouped-courses-table .table-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
 @media (max-width: 900px) {
+  .curriculum-groups {
+    gap: 1.25rem;
+  }
+  
+  .curriculum-group {
+    padding: 0.75rem;
+  }
+  
+  .grouped-courses-table th:nth-child(2),
+  .grouped-courses-table td:nth-child(2) {
+    min-width: 200px;
+  }
+  
+  .grouped-courses-table .course-desc {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
   #courses-list .courses-table thead {
     display: none;
   }
