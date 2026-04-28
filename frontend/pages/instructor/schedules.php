@@ -157,6 +157,78 @@ layout_header('Schedules', 'instructor', [APP_URL . '/frontend/assets/css/pages/
     </div>
 </div>
 
+<div class="modal-overlay" id="edit-event-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Edit Exam / Activity Schedule</div>
+            <button class="modal-close" onclick="closeEditEventModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-event-id">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type *</label>
+                    <select class="form-control" id="edit-event-type">
+                        <option value="Exam">Exam</option>
+                        <option value="Activity">Activity</option>
+                        <option value="Quiz">Quiz</option>
+                        <option value="Presentation">Presentation</option>
+                        <option value="Meeting">Meeting</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="color" class="form-control planner-color-input" id="edit-event-color" value="#1e3a5f">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" class="form-control" id="edit-event-title" placeholder="e.g., Midterm Exam">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea class="form-control" id="edit-event-description" placeholder="Optional notes or instructions"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start *</label>
+                    <input type="datetime-local" class="form-control" id="edit-event-start">
+                </div>
+                <div class="form-group">
+                    <label>End *</label>
+                    <input type="datetime-local" class="form-control" id="edit-event-end">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeEditEventModal()">Cancel</button>
+            <button class="btn btn-primary" id="save-edit-event-btn" onclick="saveEventEdit()"><i class="fas fa-save"></i> Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="delete-event-modal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+            <div class="modal-title">Delete Event</div>
+            <button class="modal-close" onclick="closeDeleteEventModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="delete-event-id">
+            <p style="color:var(--slate);font-size:.9rem;line-height:1.6">
+                Are you sure you want to delete <strong id="delete-event-name"></strong>?<br>
+                This will remove the event for all enrolled students and cannot be undone.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeDeleteEventModal()">Cancel</button>
+            <button class="btn btn-danger" id="confirm-delete-event-btn" onclick="confirmDeleteEvent()">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 <?php $coursesJsVersion = @filemtime(__DIR__ . '/../../assets/js/pages/instructor/courses.js') ?: time(); ?>
 <script src="<?= APP_URL ?>/frontend/assets/js/pages/instructor/courses.js?v=<?= $coursesJsVersion ?>"></script>
 <?php layout_footer(); ?>
