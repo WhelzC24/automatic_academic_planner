@@ -61,3 +61,4 @@ document.getElementById('curr-date').textContent = new Date().toLocaleDateString
   day: 'numeric'
 });
 loadDashboard();
+loadNotifCount();

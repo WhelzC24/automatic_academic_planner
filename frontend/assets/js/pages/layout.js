@@ -26,7 +26,12 @@ async function doLogout() {
 
 async function loadNotifCount() {
   try {
-    const res = await fetch(BASE_URL + '/backend/student/student_api.php?action=get_unread_notif_count');
+    const role = document.documentElement.dataset.role || '';
+    const apiUrl = role === 'instructor' 
+      ? BASE_URL + '/backend/instructor/instructor_api.php?action=get_unread_notif_count'
+      : BASE_URL + '/backend/student/student_api.php?action=get_unread_notif_count';
+    
+    const res = await fetch(apiUrl);
     const data = await res.json();
     if (!data.success) return;
 
@@ -34,12 +39,13 @@ async function loadNotifCount() {
     const dot = document.getElementById('notif-dot');
     if (badge) {
       badge.textContent = data.unread_notif;
-      badge.style.display = data.unread_notif > 0 ? 'inline-flex' : 'none';
+      badge.style.display = data.unread_notif >0 ? 'inline-flex' : 'none';
     }
     if (dot) {
       dot.textContent = data.unread_notif;
+      dot.style.display = data.unread_notif > 0 ? 'inline-flex' : 'none';
     }
   } catch (e) {
-    // Notification count is optional on pages without student context.
+    // Notification count is optional on pages without context.
   }
 }

@@ -48,10 +48,34 @@ async function loadProfile() {
     document.getElementById('student-fields').style.display = 'block';
     document.getElementById('p-sn').value = p.student_number || '';
     document.getElementById('p-year').value = p.year_level || 1;
-    document.getElementById('p-program').value = p.program || '';
+    const prog = p.program || '';
+    const progSelect = document.getElementById('p-program');
+    progSelect.value = prog ? (progSelect.querySelector('option[value="' + prog + '"]') ? prog : 'BSCS') : '';
+    const blocks = p.blocks || [];
+    document.getElementById('p-block').value = blocks.length > 0 ? blocks.join(', ') : 'No block enrolled';
+    
+    const coursesEl = document.getElementById('enrolled-courses-list');
+    const courses = p.enrolled_courses || [];
+    if (courses.length === 0) {
+      coursesEl.innerHTML = '<span style="color:var(--slate)">No enrolled courses yet.</span>';
+    } else {
+      coursesEl.innerHTML = courses.map(c => `
+        <div style="display:flex;justify-content:space-between;padding:.25rem 0;border-bottom:1px solid var(--border)">
+          <span><strong>${c.code}</strong> - ${c.title}</span>
+          <span style="color:var(--gold)">${c.section}</span>
+        </div>
+      `).join('');
+    }
   } else if (p.role === 'instructor') {
     document.getElementById('instructor-fields').style.display = 'block';
-    document.getElementById('p-dept').value = p.department || '';
+    const prog = p.department || p.program || '';
+    const progSelect = document.getElementById('p-dept');
+    if (prog) {
+      const opt = progSelect.querySelector('option[value="' + prog + '"]');
+      progSelect.value = opt ? prog : '';
+    } else {
+      progSelect.value = '';
+    }
     document.getElementById('p-desig').value = p.designation || '';
     document.getElementById('p-office').value = p.office_location || '';
   }

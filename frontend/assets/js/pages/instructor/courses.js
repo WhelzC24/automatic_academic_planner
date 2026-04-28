@@ -1,5 +1,6 @@
 const API = BASE_URL + '/backend/instructor/instructor_api.php';
 let currentOfferings = [];
+let currentEventsMap = {};
 
 async function loadCourses() {
   const res = await fetch(API + '?action=get_my_offerings');
@@ -69,6 +70,11 @@ async function loadInstructorEvents() {
     const data = await res.json();
     const events = data.events || [];
 
+    currentEventsMap = {};
+    events.forEach(function(ev) {
+      currentEventsMap[ev.schedule_id] = ev;
+    });
+
     if (!events.length) {
       el.innerHTML = '<div class="empty-state" style="padding:3rem"><i class="fas fa-bell"></i><p>No published exam or activity schedules yet.</p></div>';
       return;
@@ -88,7 +94,11 @@ async function loadInstructorEvents() {
                 <i class="fas fa-clock"></i> ${startLabel} – ${endLabel}
               </div>
             </div>
-            <span class="badge" style="background:${color}22;color:${color}">${eventItem.type}</span>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <span class="badge" style="background:${color}22;color:${color}">${eventItem.type}</span>
+              <button class="btn btn-xs btn-outline" style="padding:.25rem .5rem;font-size:.7rem" onclick="openEditEventModal('${eventItem.schedule_id}')" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-xs btn-danger-outline" style="padding:.25rem .5rem;font-size:.7rem" onclick="openDeleteEventModal('${eventItem.schedule_id}')" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
           </div>
           ${eventItem.description ? `<div style="color:var(--slate);font-size:.8rem;margin-top:.35rem">${eventItem.description}</div>` : ''}
           <div style="color:var(--slate);font-size:.75rem;margin-top:.35rem">
@@ -244,3 +254,124 @@ async function saveOfferingSchedule() {
 
 loadCourses();
 loadInstructorEvents();
+
+let editEventOfferingOptions = [];
+
+function openEditEventModal(eventId) {
+  const event = currentEventsMap ? currentEventsMap[eventId] : null;
+  if (!event) return;
+
+  document.getElementById('edit-event-id').value = eventId;
+  document.getElementById('edit-event-title').value = event.title || '';
+  document.getElementById('edit-event-description').value = event.description || '';
+  document.getElementById('edit-event-type').value = event.type || 'Exam';
+  document.getElementById('edit-event-color').value = event.color || '#1e3a5f';
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const startsAt = new Date(event.starts_at);
+  const endsAt = new Date(event.ends_at);
+  document.getElementById('edit-event-start').value =
+    `${startsAt.getFullYear()}-${pad(startsAt.getMonth() + 1)}-${pad(startsAt.getDate())}T${pad(startsAt.getHours())}:${pad(startsAt.getMinutes())}`;
+  document.getElementById('edit-event-end').value =
+    `${endsAt.getFullYear()}-${pad(endsAt.getMonth() + 1)}-${pad(endsAt.getDate())}T${pad(endsAt.getHours())}:${pad(endsAt.getMinutes())}`;
+
+  document.getElementById('edit-event-modal').classList.add('show');
+}
+
+function closeEditEventModal() {
+  document.getElementById('edit-event-modal').classList.remove('show');
+}
+
+async function saveEventEdit() {
+  const eventId = document.getElementById('edit-event-id').value;
+  const title = document.getElementById('edit-event-title').value.trim();
+  const description = document.getElementById('edit-event-description').value.trim();
+  const startsAt = document.getElementById('edit-event-start').value;
+  const endsAt = document.getElementById('edit-event-end').value;
+  const type = document.getElementById('edit-event-type').value;
+  const color = document.getElementById('edit-event-color').value;
+  const btn = document.getElementById('save-edit-event-btn');
+
+  if (!eventId || !title || !startsAt || !endsAt) {
+    toast('Please complete all required fields.', 'error');
+    return;
+  }
+
+  const startDate = new Date(startsAt);
+  const endDate = new Date(endsAt);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) {
+    toast('End time must be later than start time.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+  const fd = new FormData();
+  fd.append('action', 'update_event');
+  fd.append('event_id', eventId);
+  fd.append('title', title);
+  fd.append('description', description);
+  fd.append('starts_at', startsAt);
+  fd.append('ends_at', endsAt);
+  fd.append('type', type);
+  fd.append('color', color);
+
+  try {
+    const res = await fetch(API, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      toast(data.message || 'Event updated.');
+      closeEditEventModal();
+      loadInstructorEvents();
+    } else {
+      toast(data.message || 'Unable to update event.', 'error');
+    }
+  } catch (err) {
+    toast('Unable to update event right now.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+  }
+}
+
+function openDeleteEventModal(eventId) {
+  const event = currentEventsMap ? currentEventsMap[eventId] : null;
+  if (!event) return;
+  document.getElementById('delete-event-id').value = eventId;
+  document.getElementById('delete-event-name').textContent = event.title || 'this event';
+  document.getElementById('delete-event-modal').classList.add('show');
+}
+
+function closeDeleteEventModal() {
+  document.getElementById('delete-event-modal').classList.remove('show');
+}
+
+async function confirmDeleteEvent() {
+  const eventId = document.getElementById('delete-event-id').value;
+  const btn = document.getElementById('confirm-delete-event-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Deleting...';
+
+  const fd = new FormData();
+  fd.append('action', 'delete_event');
+  fd.append('event_id', eventId);
+
+  try {
+    const res = await fetch(API, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      toast(data.message || 'Event deleted.');
+      closeDeleteEventModal();
+      loadInstructorEvents();
+    } else {
+      toast(data.message || 'Unable to delete event.', 'error');
+    }
+  } catch (err) {
+    toast('Unable to delete event right now.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+  }
+}
