@@ -86,6 +86,25 @@ layout_header('Course Management', 'admin');
           <input type="number" class="form-control" id="c-units" value="3" min="1" max="6">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label>Year Level *</label>
+          <select class="form-control" id="c-year">
+            <option value="">Select year...</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Semester *</label>
+          <select class="form-control" id="c-semester">
+            <option value="">Select semester...</option>
+            <option value="1st Semester">1st Semester</option>
+            <option value="2nd Semester">2nd Semester</option>
+            <option value="Summer">Summer</option>
+          </select>
+        </div>
+      </div>
       <div class="form-group"><label>Course Title *</label>
         <input type="text" class="form-control" id="c-title" placeholder="Introduction to Computing">
       </div>
@@ -696,7 +715,7 @@ layout_header('Course Management', 'admin');
   }
 
   function openCourseModal() {
-    ['c-code', 'c-title', 'c-desc'].forEach(id => document.getElementById(id).value = '');
+    ['c-code', 'c-title', 'c-desc', 'c-year', 'c-semester'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('c-units').value = 3;
     document.getElementById('course-modal').classList.add('show');
   }
@@ -734,6 +753,8 @@ layout_header('Course Management', 'admin');
     fd.append('title', document.getElementById('c-title').value.trim());
     fd.append('description', document.getElementById('c-desc').value.trim());
     fd.append('units', document.getElementById('c-units').value);
+    fd.append('year_level', document.getElementById('c-year').value);
+    fd.append('semester', document.getElementById('c-semester').value);
     const res = await fetch(API, {
       method: 'POST',
       body: fd
