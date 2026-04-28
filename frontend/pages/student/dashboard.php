@@ -57,8 +57,8 @@ layout_header('Student Dashboard', 'student');
         <!-- Today's Tasks -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="fas fa-sun"></i> Today's Tasks</div>
-            <a href="tasks.php" class="btn btn-sm btn-outline">View All</a>
+            <div class="card-title"><i class="fas fa-sun"></i> Today's Work</div>
+            <a href="assignments.php" class="btn btn-sm btn-outline">View All</a>
           </div>
           <div class="card-body" style="padding:0">
             <div id="today-tasks">
@@ -71,7 +71,7 @@ layout_header('Student Dashboard', 'student');
         <div class="card">
           <div class="card-header">
             <div class="card-title"><i class="fas fa-clock"></i> Upcoming Deadlines</div>
-            <a href="assignments.php" class="btn btn-sm btn-outline">View All</a>
+            <a href="coursework.php" class="btn btn-sm btn-outline">View All</a>
           </div>
           <div class="card-body" style="padding:0">
             <div id="upcoming-list">

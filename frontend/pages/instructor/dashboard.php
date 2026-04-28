@@ -15,6 +15,10 @@ layout_header('Instructor Dashboard', 'instructor', [APP_URL . '/frontend/assets
       <div class="topbar-actions">
         <a class="btn btn-outline" href="courses.php"><i class="fas fa-book-open"></i> My Courses</a>
         <a class="btn btn-outline" href="schedules.php"><i class="fas fa-calendar-alt"></i> Schedules</a>
+        <button class="notif-btn" id="notif-btn" onclick="location.href='notifications.php'">
+          <i class="fas fa-bell"></i>
+          <span class="notif-dot" id="notif-dot">0</span>
+        </button>
         <a class="btn btn-primary" href="assignments.php"><i class="fas fa-plus"></i> New Assignment</a>
       </div>
     </div>
