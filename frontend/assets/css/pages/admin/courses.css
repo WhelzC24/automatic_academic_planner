@@ -49,6 +49,7 @@
   word-break: break-word;
   vertical-align: top;
   padding: 0.75rem 0.5rem;
+  text-align: left;
 }
 
 #courses-list .courses-table th,
@@ -56,21 +57,6 @@
   background: #e2e8f0;
   font-weight: 700;
   color: #334155;
-  text-align: center;
-}
-
-#courses-list .courses-table th,
-#offerings-list .courses-table th {
-  background: #e2e8f0 !important;
-}
-
-#courses-list .courses-table th,
-#offerings-list .courses-table th {
-  background: #e2e8f0;
-  font-weight: 700;
-  color: #334155;
-  text-align: center;
-  padding: 0.75rem 0.5rem;
 }
 
 #courses-list .courses-table th:nth-child(1),
@@ -104,12 +90,10 @@
 #offerings-list .courses-table td:nth-child(8) { width: 10%; }
 
 #courses-list .courses-table .badge {
-  display: block;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.2;
-  text-align: center;
 }
 
 @media (max-width: 900px) {
