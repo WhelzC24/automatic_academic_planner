@@ -99,8 +99,21 @@ layout_header('My Profile', $role, [APP_URL . '/frontend/assets/css/pages/profil
                       </div>
                     </div>
                     <div class="form-group">
-                      <label>Program / Course</label>
-                      <input type="text" class="form-control" id="p-program" placeholder="BS Computer Science">
+                      <label>Program</label>
+                      <select class="form-control" id="p-program" disabled style="background:var(--bg);cursor:not-allowed">
+                        <option value="">Select program...</option>
+                        <option value="BSCS">Bachelor of Science in Computer Science (BSCS)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Block</label>
+                      <input type="text" class="form-control" id="p-block" disabled style="background:var(--bg);cursor:not-allowed" placeholder="No block enrolled">
+                    </div>
+                    <div class="form-group">
+                      <label>Enrolled Courses</label>
+                      <div id="enrolled-courses-list" style="font-size:.85rem;color:var(--slate);background:var(--bg);padding:.75rem;border-radius:6px;min-height:60px">
+                        <span class="spinner" style="font-size:.7rem"></span>
+                      </div>
                     </div>
                   </div>
 
@@ -111,8 +124,11 @@ layout_header('My Profile', $role, [APP_URL . '/frontend/assets/css/pages/profil
                     </div>
                     <div class="form-row">
                       <div class="form-group">
-                        <label>Department</label>
-                        <input type="text" class="form-control" id="p-dept">
+                        <label>Program</label>
+                        <select class="form-control" id="p-dept" disabled style="background:var(--bg);cursor:not-allowed">
+                          <option value="">Select program...</option>
+                          <option value="BSCS">Bachelor of Science in Computer Science (BSCS)</option>
+                        </select>
                       </div>
                       <div class="form-group">
                         <label>Designation</label>
