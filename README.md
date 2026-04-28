@@ -1,341 +1,345 @@
-# BISU Calape Campus — Automated Daily Academic Planner
-## Thesis Project Documentation & Setup Guide
+# BISU Calape Campus Academic Planner
+## Thesis Project Documentation and Setup Guide
 
----
-
-## SYSTEM OVERVIEW
+## System Overview
 
 **Title:** Automated Daily Academic Planner with Deadline Tracking in BISU Calape Campus  
-**Stack:** PHP 8.x · MySQL 8 · HTML5 / CSS3 / Vanilla JavaScript  
-**Author:** [Your Name]  
-**Year:** 2024–2025
+**Stack:** PHP 8.x, MySQL, HTML5, CSS3, Vanilla JavaScript  
+**Campus:** BISU Calape  
+**Scope:** Student, Instructor, and Admin academic workflows
 
----
+This README reflects the current implementation in this repository, including the latest enrollment, schedule, coursework, and notification flows.
 
-## PROJECT STRUCTURE
+## Project Structure
 
-```
+```text
 bisu_planner/
-├── index.php                          ← Root redirect
-├── uploads/                           ← Student file submissions
-│   └── .htaccess                      ← Security rules
-├── database/
-│   └── schema.sql                     ← Full database schema + seed data
-├── backend/
-│   ├── config/
-│   │   ├── database.php               ← DB connection + constants
-│   │   └── helpers.php                ← Auth, session, utilities
-│   ├── auth/
-│   │   └── auth_handler.php           ← Login / Register / Logout
-│   ├── student/
-│   │   └── student_api.php            ← All student API endpoints
-│   ├── instructor/
-│   │   └── instructor_api.php         ← All instructor API endpoints
-│   └── admin/
-│       └── admin_api.php              ← All admin API endpoints
-└── frontend/
-    └── pages/
-        ├── login.php                  ← Login + Register page
-        ├── unauthorized.php           ← Access denied page
-        ├── layout.php                 ← Shared sidebar + header + footer
-        ├── student/
-        │   ├── dashboard.php          ← Student dashboard
-        │   ├── tasks.php              ← Assignment-linked task tracker
-        │   ├── assignments.php        ← View & submit assignments
-        │   ├── planner.php            ← Personal schedules + read-only class/events tab
-        │   ├── schedule.php           ← Weekly/monthly schedule view
-        │   └── notifications.php     ← Notification center
-        ├── instructor/
-        │   ├── dashboard.php          ← Instructor dashboard
-        │   ├── courses.php            ← My course offerings
-        │   ├── assignments.php        ← Create & manage assignments
-        │   ├── schedules.php          ← Class schedule + published events manager
-        │   └── submissions.php        ← View & grade submissions
-        └── admin/
-            ├── dashboard.php          ← Admin overview + stats
-            ├── users.php              ← User management
-            ├── courses.php            ← Course & offering management
-            └── logs.php               ← System activity logs
+|- index.php
+|- setup.php
+|- README.md
+|- .gitignore
+|- uploads/
+|  |- .htaccess
+|  `- submissions/ (auto-created)
+|- database/
+|  `- schema.sql
+|- backend/
+|  |- config/
+|  |  |- database.php
+|  |  `- helpers.php
+|  |- auth/
+|  |  `- auth_handler.php
+|  |- api/
+|  |  `- profile_api.php
+|  |- student/
+|  |  `- student_api.php
+|  |- instructor/
+|  |  `- instructor_api.php
+|  |- admin/
+|  |  `- admin_api.php
+|  `- cron/
+|     `- scheduler.php
+`- frontend/
+   |- assets/
+   |  |- css/
+   |  |  `- app.css
+   |  `- js/
+   |     `- pages/
+   |- pages/
+   |  |- layout.php
+   |  |- login.php
+   |  |- profile.php
+   |  |- unauthorized.php
+   |  |- student/
+   |  |  |- dashboard.php
+   |  |  |- coursework.php
+   |  |  |- schedule.php
+   |  |  `- notifications.php
+   |  |- instructor/
+   |  |  |- dashboard.php
+   |  |  |- courses.php
+   |  |  |- schedules.php
+   |  |  |- assignments.php
+   |  |  |- submissions.php
+   |  |  `- notifications.php
+   |  `- admin/
+   |     |- dashboard.php
+   |     |- users.php
+   |     |- courses.php
+   |     |- enrollments.php
+   |     `- logs.php
+   `- img/
 ```
 
----
+## Installation
 
-## INSTALLATION STEPS
-
-### Step 1 — Requirements
+### 1. Requirements
 
 | Requirement | Version |
-|-------------|---------|
-| PHP         | 8.0+    |
-| MySQL       | 8.0+    |
-| Apache      | 2.4+    |
-| XAMPP/WAMP  | Latest  |
+|---|---|
+| PHP | 8.0+ |
+| MySQL / MariaDB | 10+ / 8+ |
+| Apache | 2.4+ |
+| XAMPP/WAMP/LAMP | Latest stable |
 
-### Step 2 — Copy Project Files
+### 2. Place Project Folder
 
-Copy the entire `bisu_planner/` folder to:
-- **XAMPP:** `C:/xampp/htdocs/bisu_planner/`
-- **WAMP:**  `C:/wamp64/www/bisu_planner/`
+Copy `bisu_planner` into your web root.
 
-### Step 3 — Create the Database
+- XAMPP: `C:/xampp/htdocs/bisu_planner/`
+- WAMP: `C:/wamp64/www/bisu_planner/`
+- Linux Apache: usually `/var/www/html/bisu_planner/`
 
-1. Open **phpMyAdmin** → `http://localhost/phpmyadmin`
-2. Click **"New"** → Name it `academic_planner` → Create
-3. Click the `academic_planner` database → **Import** tab
-4. Browse to `database/schema.sql` → Click **Go**
+### 3. Create Database and Import Schema
 
-### Step 4 — Configure Database Connection
+1. Create database: `academic_planner`
+2. Import `database/schema.sql`
 
-Open `backend/config/database.php` and update:
+### 4. Configure Database Connection
+
+Edit `backend/config/database.php`:
 
 ```php
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'academic_planner');
-define('DB_USER', 'root');         // your MySQL username
-define('DB_PASS', '');             // your MySQL password
+define('DB_USER', 'root');
+define('DB_PASS', '');
 define('APP_URL', 'http://localhost/bisu_planner');
 ```
 
-### Step 5 — Create Upload Folder Permissions
+### 5. Configure Upload Permissions
 
-Ensure the `uploads/` folder exists and is writable:
+`uploads` must be writable by the web server user.
+
+```bash
+chmod -R 775 uploads/
 ```
-uploads/
-└── submissions/   ← auto-created on first submission
-```
 
-On Linux/Mac: make sure the web server user can write to `uploads/` and `uploads/submissions/`.
-If you are developing locally, `chmod -R 775 uploads/` is usually enough; some setups may require ownership or broader permissions.
+`.gitignore` is configured to ignore uploaded files while keeping `uploads/.htaccess` tracked.
 
-### Step 6 — Access the Application
+### 6. Open the App
 
-Open your browser → `http://localhost/bisu_planner`
+Visit: `http://localhost/bisu_planner`
 
----
+## Default Account
 
-## DEFAULT ACCOUNTS
+A default admin account is seeded in `database/schema.sql`.
 
-| Role       | Username | Password   | Notes                              |
-|------------|----------|------------|------------------------------------|
-| Admin      | admin    | *(set up)* | Change password after first login  |
+| Role | Username |
+|---|---|
+| Admin | `admin` |
 
-> **How to set admin password:**
-> For fresh installs (editing seed data):
-> 1. Generate a bcrypt hash in terminal:
->    php -r "echo password_hash('YourPassword123', PASSWORD_BCRYPT, ['cost'=>12]), PHP_EOL;"
-> 2. Open `database/schema.sql` and replace the admin `password_hash` value in the default admin insert.
-> 3. Import the schema.
->
-> For already-installed systems:
-> 1. Generate the bcrypt hash using the same command above.
-> 2. Update the existing admin row in MySQL:
->    UPDATE users SET password_hash = 'PASTE_BCRYPT_HASH_HERE' WHERE username = 'admin';
->
-> Note: Do not use SHA2 for `password_hash`. This project uses PHP `password_hash()` / `password_verify()` with bcrypt.
+If needed, regenerate admin password hash using PHP `password_hash()` and update the seeded hash before importing.
 
----
+## Current Role Features
 
-## USER ROLES & FEATURES
+### Student
 
-### 👨‍🎓 STUDENT
-| Feature | Description |
-|---------|-------------|
-| Dashboard | Today's tasks, upcoming deadlines, notification count, quick task completion |
-| Tasks | Assignment-linked task tracker with status updates |
-| Assignments | View all course assignments, submit files, check grades & feedback |
-| Planner | Personal schedules plus read-only class schedules and instructor events |
-| Schedule | Weekly grid view + monthly list of class/study/meeting/exam/activity/quiz/presentation schedules |
-| Notifications | Deadline reminders (3-day, 1-day, due-day), new assignment alerts, submission confirmations |
+- Dashboard with task stats, unread notifications, today tasks, and upcoming deadlines
+- Coursework page for assignment tracking and submission upload
+- Schedule page with:
+  - personal schedules (create, update, delete)
+  - week view
+  - read-only class schedules and instructor-published events
+- Notifications center (single mark read, mark all read)
+- Profile management and password update
 
-### 👨‍🏫 INSTRUCTOR
-| Feature | Description |
-|---------|-------------|
-| Dashboard | Course overview, recent submissions |
-| My Courses | View assigned course offerings with details |
-| Assignments | Create assignments with description/due date/max score; auto-notifies enrolled students and syncs planner tasks |
-| Schedules | Edit class schedule details and publish exams, activities, quizzes, and presentations |
-| Submissions | View all submissions per assignment; download files; grade with feedback |
+### Instructor
 
-### 🛠 ADMIN
-| Feature | Description |
-|---------|-------------|
-| Dashboard | System stats (students, instructors, courses, assignments, submissions) |
-| User Management | Add students/instructors; activate/deactivate/delete accounts; reset student/instructor passwords to default `12345` |
-| Course Management | Create courses, add offerings with term/section/schedule/room, assign instructors, enroll students |
-| System Logs | Full audit trail of all actions with timestamps, usernames, IP addresses |
+- Dashboard with assigned offerings and recent submissions
+- My Courses view
+- Assignments management (create, update, delete)
+- Submissions review and grading
+- Schedules page:
+  - update class schedule and room per offering
+  - create, edit, and delete offering events (exam/activity/quiz/presentation/meeting)
+- Notifications center
+- Profile management and password update
 
----
+### Admin
 
-## DATABASE TABLES
+- Dashboard stats and recent logs
+- User management:
+  - add student/instructor
+  - activate/deactivate user
+  - delete user
+  - reset student/instructor password to default
+- Course and offering management:
+  - add/update course
+  - add/update/delete offering
+  - assign instructor
+- Enrollment management:
+  - enroll student by course + section (offering)
+  - view and filter enrollments
+  - unenroll student
+- System logs and system summary endpoints
 
-| Table | Description |
-|-------|-------------|
-| `users` | All system accounts (students, instructors, admins), including `must_change_password` flag for forced password updates |
-| `students` | Student-specific data (student number, program, year) |
-| `instructors` | Instructor-specific data (department, designation) |
-| `admins` | Admin-specific data |
+## Automation and System Behavior
+
+- Assignment-to-task sync for students is maintained in student and instructor flows
+- Overdue task marking and deadline notifications are auto-triggered in active flows
+- Assignment submissions update linked task status
+- Instructor event publishing creates student schedule entries and notifications
+- Cleanup endpoint exists to remove expired instructor-created schedule events
+
+## Database Tables
+
+| Table | Purpose |
+|---|---|
+| `users` | Base accounts and auth fields |
+| `students` | Student-specific profile data |
+| `instructors` | Instructor-specific profile data |
+| `admins` | Admin metadata |
 | `courses` | Course catalog |
-| `course_offerings` | Specific course sections per term |
-| `enrollments` | Student-to-offering relationships |
-| `teaching_assignments` | Instructor-to-offering relationships |
-| `assignments` | Coursework created by instructors for course offerings |
-| `submissions` | Student file submissions for assignments |
-| `tasks` | Assignment-linked planner tasks for students |
-| `schedules` | Calendar events (class, study, personal, meeting, exam, activity, quiz, presentation) |
-| `notifications` | System-generated alerts (deadline, assignment, submission) |
-| `system_logs` | Audit trail of all system actions |
+| `course_offerings` | Term/section-based offerings |
+| `enrollments` | Student to offering relationships |
+| `teaching_assignments` | Instructor to offering relationships |
+| `assignments` | Coursework per offering |
+| `submissions` | Student assignment submissions |
+| `tasks` | Assignment-linked planner tasks |
+| `schedules` | Personal and instructor-published schedule events |
+| `notifications` | User alerts and reminders |
+| `system_logs` | Audit trail of actions |
 
----
+## Security Highlights
 
-## SECURITY FEATURES
+- Password hashing with bcrypt (`password_hash`, `password_verify`)
+- Role-protected pages and APIs via `requireAuth(...)`
+- PDO prepared statements used across handlers
+- Upload validation: extension allowlist + size cap + unique filenames
+- Upload execution hardening via `uploads/.htaccess`
+- Force-change-password flow supported (`must_change_password`)
 
-- **Password hashing:** PHP `password_hash()` with BCRYPT (cost=12)
-- **Forced password reset flow:** Admin reset sets default password `12345` and requires user to change password on next login
-- **SQL injection prevention:** PDO prepared statements throughout
-- **Session security:** `session_regenerate_id()` on login, HttpOnly cookies
-- **Role-based access control:** `requireAuth('role')` on every protected page
-- **File upload security:** Extension whitelist, size limit (10MB), random filenames
-- **Upload directory protection:** `.htaccess` blocks PHP execution in uploads folder
-- **XSS prevention:** `htmlspecialchars()` on all output via `e()` helper
+## API Endpoints
 
----
+All APIs use `action` parameters.
 
-## AUTOMATED FEATURES
+### Auth API (`backend/auth/auth_handler.php`)
 
-### Deadline Reminders (Auto-generated)
-- ✅ 3 days before assignment due date
-- ✅ 1 day before assignment due date  
-- ✅ On the due date
-- Triggered automatically on each login
+| Action | Method | Description |
+|---|---|---|
+| `login` | POST | Login by username/email and password |
+| `register` | POST | Register student account |
+| `change_password_required` | POST | Complete forced password change |
+| `logout` | POST | Logout and destroy session |
 
-### Assignment Task Sync (Auto)
-- Assignment-linked planner tasks are created automatically for enrolled students
-- Task details stay in sync when assignments are updated
-- Submitting an assignment marks the linked planner task as completed or overdue
+### Profile API (`backend/api/profile_api.php`)
 
-### Overdue Task Detection (Auto)
-- Tasks past their due date are automatically marked `Overdue`
-- Runs on every student login
-
-### Assignment Notifications (Auto)
-- When instructor creates an assignment → all enrolled students receive a notification instantly
-- When instructor publishes an event in the Schedules page → students can see it in the read-only planner tab
-
----
-
-## API ENDPOINTS
+| Action | Method | Description |
+|---|---|---|
+| `get_profile` | GET | Get current user profile |
+| `update_profile` | POST | Update profile fields by role |
+| `change_password` | POST | Change current user password |
 
 ### Student API (`backend/student/student_api.php`)
+
 | Action | Method | Description |
-|--------|--------|-------------|
-| `get_dashboard` | GET | Dashboard data (tasks, deadlines, stats) |
-| `get_tasks` | GET | Assignment-linked tasks for the student |
-| `mark_task_status` | POST | Quick status update |
-| `get_schedules` | GET | Get schedules for date range |
-| `add_schedule` | POST | Add schedule event |
-| `get_readonly_schedules` | GET | Student view of class schedules and instructor events |
-| `get_assignments` | GET | All course assignments with submission status |
-| `submit_assignment` | POST | Upload file submission |
-| `get_notifications` | GET | All notifications |
-| `get_unread_notif_count` | GET | Unread notification badge count |
-| `mark_notification_read` | POST | Mark one as read |
-| `mark_all_read` | POST | Mark all as read |
+|---|---|---|
+| `get_dashboard` | GET | Dashboard payload (today tasks, upcoming, stats, unread count) |
+| `get_unread_notif_count` | GET | Unread notification count |
+| `mark_task_status` | POST | Update task status (assignment-linked quick action) |
+| `get_schedules` | GET | Personal schedule list by date range |
+| `get_readonly_schedules` | GET | Read-only class schedules and instructor events |
+| `add_schedule` | POST | Add personal schedule |
+| `update_schedule` | POST | Update personal schedule |
+| `delete_schedule` | POST | Delete personal schedule (with ownership checks) |
+| `cleanup_expired_schedules` | POST/GET | Cleanup expired instructor-created events |
+| `get_assignments` | GET | Coursework list with submission/task metadata |
+| `submit_assignment` | POST | Upload assignment submission |
+| `get_notifications` | GET | List notifications |
+| `mark_notification_read` | POST | Mark single notification read |
+| `mark_all_read` | POST | Mark all notifications read |
 
 ### Instructor API (`backend/instructor/instructor_api.php`)
+
 | Action | Method | Description |
-|--------|--------|-------------|
-| `get_dashboard` | GET | Offerings + recent submissions |
-| `get_my_offerings` | GET | All course offerings assigned to the instructor |
-| `create_assignment` | POST | New assignment (auto-notifies students) |
-| `update_assignment` | POST | Edit assignment |
+|---|---|---|
+| `get_dashboard` | GET | Offerings and recent submissions |
+| `get_my_assignments` | GET | Instructor assignment list |
+| `create_assignment` | POST | Create assignment and notify students |
+| `update_assignment` | POST | Update assignment and sync linked tasks |
 | `delete_assignment` | POST | Delete assignment |
-| `get_submissions` | GET | Submissions for specific assignment |
-| `grade_submission` | POST | Save grade + feedback |
-| `update_offering_schedule` | POST | Update class schedule and room for an offering |
-| `create_offering_event` | POST | Publish an exam/activity/quiz/presentation to enrolled students |
-| `get_offering_events` | GET | List published events per offering |
+| `get_submissions` | GET | Get submissions for assignment |
+| `grade_submission` | POST | Save grade and feedback |
+| `get_my_offerings` | GET | Instructor offerings |
+| `update_offering_schedule` | POST | Update offering schedule and room |
+| `create_offering_event` | POST | Publish event to enrolled students |
+| `get_offering_events` | GET | List published events |
+| `get_single_event` | GET | Fetch single event |
+| `update_event` | POST | Update event |
+| `delete_event` | POST | Delete event |
+| `get_notifications` | GET | List instructor notifications |
+| `mark_notification_read` | POST | Mark one notification read |
+| `mark_all_read` | POST | Mark all notifications read |
+| `get_unread_notif_count` | GET | Unread count |
 
 ### Admin API (`backend/admin/admin_api.php`)
+
 | Action | Method | Description |
-|--------|--------|-------------|
-| `get_stats` | GET | System statistics + recent logs |
-| `get_users` | GET | List users (filter by role) |
+|---|---|---|
+| `get_stats` | GET | Dashboard stats and recent logs |
+| `get_users` | GET | Users list (optional role filter) |
 | `add_student` | POST | Create student account |
 | `add_instructor` | POST | Create instructor account |
-| `toggle_user` | POST | Activate/deactivate user |
-| `delete_user` | POST | Delete user account |
-| `reset_user_password` | POST | Reset student/instructor password to `12345` and force change on next login |
-| `get_courses` | GET | All courses with offering count |
-| `add_course` | POST | Create new course |
-| `add_offering` | POST | Create course offering |
+| `toggle_user` | POST | Activate/deactivate account |
+| `delete_user` | POST | Delete account |
+| `reset_user_password` | POST | Reset password and force change |
+| `get_courses` | GET | List courses |
+| `add_course` | POST | Create course |
+| `update_course` | POST | Update course |
+| `add_offering` | POST | Create offering |
+| `update_offering` | POST | Update offering and instructor assignment |
+| `delete_offering` | POST | Delete offering |
+| `delete_course` | POST | Delete course (with dependency checks) |
+| `assign_instructor` | POST | Assign/update instructor for offering |
 | `enroll_student` | POST | Enroll student in offering |
-| `get_logs` | GET | System activity logs |
+| `get_enrollments` | GET | Get enrollment records |
+| `unenroll_student` | POST | Remove enrollment |
+| `get_offering_list` | GET | Offerings list with section and instructor |
+| `get_system_summary` | GET | Row counts for key tables |
+| `get_logs` | GET | System logs list |
 
----
+## Typical Workflows
 
-## WORKFLOW — TYPICAL USAGE
+### Admin Setup
 
-### Admin Setup Workflow
-1. Login as admin → Create courses
-2. Add course offerings (term, section, room, schedule)
-3. Add instructor accounts → Assign to offerings
-4. Add student accounts → Enroll in offerings
+1. Create courses
+2. Create offerings (term, section, schedule, room)
+3. Add instructors and assign offerings
+4. Add students
+5. Enroll students by selecting course then section
 
-### Admin Password Reset Flow
-1. Login as admin and open User Management.
-2. Find a student or instructor account and click the reset password button (key icon).
-3. Confirm reset to set password to `12345`.
-4. User logs in using `12345`.
-5. System shows a required change-password popup before dashboard access.
-6. User enters new password and confirm password.
-7. On success, `must_change_password` is cleared and the user is redirected to their dashboard.
+### Instructor Flow
 
-### Instructor Workflow
-1. Login → View your course offerings
-2. Create assignments with due dates and instructions
-3. Students receive automatic notifications
-4. View/download/grade submissions with feedback
+1. Review assigned offerings
+2. Set offering schedule/room
+3. Create assignments
+4. Publish class events (exam/activity/quiz/presentation/meeting)
+5. Review and grade submissions
 
-### Student Workflow
-1. Register or login with admin-created account
-2. View dashboard → see today's tasks and upcoming deadlines
-3. Add personal schedules and review instructor-published class events in the planner
-4. View assignments → upload submissions before deadline
-5. Check notifications for reminders and updates
-6. View grades and instructor feedback
+### Student Flow
 
----
+1. Login and open dashboard
+2. Track deadlines and tasks
+3. Submit coursework files
+4. Manage personal schedules and view read-only class schedules
+5. Check notifications and profile updates
 
-## CUSTOMIZATION
+## UI Notes (Current)
 
-### Change School Name
-In `frontend/pages/layout.php`, find:
-```html
-<h3>BISU Planner</h3>
-<p>Calape Campus</p>
-```
+- Login page provides Sign In and Register tabs in one screen
+- Marketing panel highlights planner, reminders, submissions, progress, and instructor-student connection
+- Role sidebars include notifications and profile access
 
-### Add More Programs
-Update the `program` field in user registration to use a `<select>` with BISU program options.
-
-### Email Notifications (Future Enhancement)
-Add PHP Mailer or SMTP in `helpers.php` `generateDeadlineNotifications()` function to also send email.
-
----
-
-## TECH STACK SUMMARY
+## Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| Frontend | HTML5, CSS3, Vanilla JavaScript (ES6+) |
-| Styling | Custom CSS with CSS Variables (no Bootstrap required) |
-| Icons | Font Awesome 6.5 |
-| Fonts | Playfair Display + DM Sans (Google Fonts) |
-| Backend | PHP 8.x (PDO, OOP-style functions) |
-| Database | MySQL 8 (InnoDB, Foreign Keys, Transactions) |
-| Auth | PHP Sessions + BCRYPT password hashing |
-| File Upload | PHP `move_uploaded_file()` with validation |
+|---|---|
+| Frontend | HTML5, CSS3, Vanilla JavaScript |
+| Backend | PHP 8.x |
+| DB | MySQL / MariaDB (InnoDB, foreign keys) |
+| Auth | PHP sessions + bcrypt |
+| Icons | Font Awesome |
+| Fonts | Google Fonts (Playfair Display, DM Sans) |
 
----
-
-*BISU Calape Campus Academic Planner — Thesis Project 2026–2027*
+BISU Calape Campus Academic Planner
