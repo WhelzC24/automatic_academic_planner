@@ -63,11 +63,13 @@ CREATE TABLE admins (
 -- COURSES TABLE
 -- ============================================================
 CREATE TABLE courses (
-    course_id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    course_id    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code        VARCHAR(20) NOT NULL UNIQUE,
     title       VARCHAR(150) NOT NULL,
     description TEXT,
     units       TINYINT UNSIGNED NOT NULL DEFAULT 3,
+    year_level  TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    semester   VARCHAR(20) NOT NULL DEFAULT '1st Semester',
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -80,6 +82,8 @@ CREATE TABLE course_offerings (
     term        VARCHAR(30) NOT NULL,
     section     VARCHAR(30) NOT NULL,
     schedule    VARCHAR(100),
+    time_start  TIME,
+    time_end    TIME,
     room        VARCHAR(50),
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE
@@ -169,6 +173,8 @@ CREATE TABLE tasks (
 CREATE TABLE schedules (
     schedule_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id     INT UNSIGNED NOT NULL,
+    created_by   INT UNSIGNED NULL,
+    offering_id  INT UNSIGNED NULL,
     title       VARCHAR(200) NOT NULL,
     description TEXT,
     starts_at   DATETIME NOT NULL,
@@ -176,7 +182,9 @@ CREATE TABLE schedules (
     type        ENUM('Class','Study','Personal','Meeting','Exam','Activity','Quiz','Presentation') NOT NULL DEFAULT 'Personal',
     color       VARCHAR(7) DEFAULT '#4f46e5',
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (offering_id) REFERENCES course_offerings(offering_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ============================================================
