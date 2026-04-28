@@ -4,7 +4,7 @@
 function layout_header(string $title, string $role, array $extraCss = [], array $extraHeadScripts = []): void
 { ?>
   <!DOCTYPE html>
-  <html lang="en">
+  <html lang="en" data-role="<?= htmlspecialchars($role) ?>">
 
   <head>
     <?php $layoutCssVersion = @filemtime(__DIR__ . '/../assets/css/pages/layout.css') ?: time(); ?>
@@ -36,21 +36,20 @@ function layout_sidebar(string $role, string $activePage = ''): void
   if ($role === 'student') {
     $navItems = [
       ['icon' => 'tachometer-alt', 'label' => 'Dashboard',    'page' => 'dashboard',    'url' => APP_URL . '/frontend/pages/student/dashboard.php'],
-      ['icon' => 'tasks',         'label' => 'My Tasks',     'page' => 'tasks',        'url' => APP_URL . '/frontend/pages/student/tasks.php'],
-      ['icon' => 'calendar-alt',  'label' => 'Planner',      'page' => 'planner',      'url' => APP_URL . '/frontend/pages/student/planner.php'],
-      ['icon' => 'file-alt',      'label' => 'Assignments',  'page' => 'assignments',  'url' => APP_URL . '/frontend/pages/student/assignments.php'],
-      ['icon' => 'calendar-week', 'label' => 'Schedule',     'page' => 'schedule',     'url' => APP_URL . '/frontend/pages/student/schedule.php'],
+      ['icon' => 'calendar-alt',   'label' => 'Schedule',     'page' => 'schedule',     'url' => APP_URL . '/frontend/pages/student/schedule.php'],
+      ['icon' => 'file-alt',      'label' => 'Coursework',   'page' => 'coursework',  'url' => APP_URL . '/frontend/pages/student/coursework.php'],
       ['icon' => 'bell',          'label' => 'Notifications', 'page' => 'notifications', 'url' => APP_URL . '/frontend/pages/student/notifications.php'],
       ['icon' => 'user-circle',   'label' => 'My Profile',   'page' => 'profile',      'url' => APP_URL . '/frontend/pages/profile.php'],
     ];
   } elseif ($role === 'instructor') {
-    $navItems = [
+$navItems = [
       ['icon' => 'tachometer-alt', 'label' => 'Dashboard',  'page' => 'dashboard',  'url' => APP_URL . '/frontend/pages/instructor/dashboard.php'],
       ['icon' => 'book-open',      'label' => 'My Courses', 'page' => 'courses',    'url' => APP_URL . '/frontend/pages/instructor/courses.php'],
       ['icon' => 'calendar-alt',   'label' => 'Schedules',  'page' => 'schedules',  'url' => APP_URL . '/frontend/pages/instructor/schedules.php'],
       ['icon' => 'clipboard-list', 'label' => 'Assignments', 'page' => 'assignments', 'url' => APP_URL . '/frontend/pages/instructor/assignments.php'],
       ['icon' => 'upload',         'label' => 'Submissions', 'page' => 'submissions', 'url' => APP_URL . '/frontend/pages/instructor/submissions.php'],
-      ['icon' => 'user-circle',    'label' => 'My Profile', 'page' => 'profile',    'url' => APP_URL . '/frontend/pages/profile.php'],
+      ['icon' => 'bell',           'label' => 'Notifications', 'page' => 'notifications', 'url' => APP_URL . '/frontend/pages/instructor/notifications.php'],
+      ['icon' => 'user-circle',   'label' => 'My Profile', 'page' => 'profile',    'url' => APP_URL . '/frontend/pages/profile.php'],
     ];
   } else {
     $navItems = [
@@ -108,7 +107,11 @@ function layout_sidebar(string $role, string $activePage = ''): void
 function layout_footer(): void
 { ?>
     <div class="toast-container" id="toast-container"></div>
-    </body>
+    <script>
+      const ROLE = '<?= $role ?? '' ?>';
+    </script>
+    <script src="<?= APP_URL ?>/frontend/assets/js/pages/layout.js"></script>
+  </body>
 
-  </html>
+</html>
 <?php }
