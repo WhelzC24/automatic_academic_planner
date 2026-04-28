@@ -118,14 +118,20 @@ layout_header('User Management', 'admin');
           </div>
         </div>
         <div class="form-group"><label>Program</label>
-          <input type="text" class="form-control" id="u-program" placeholder="BS Computer Science">
+          <select class="form-control" id="u-program">
+            <option value="">Select program...</option>
+            <option value="BSCS">Bachelor of Science in Computer Science (BSCS)</option>
+          </select>
         </div>
       </div>
 
       <div id="instructor-fields" style="display:none">
         <div class="form-row">
-          <div class="form-group"><label>Department *</label>
-            <input type="text" class="form-control" id="u-dept" placeholder="Computer Science">
+          <div class="form-group"><label>Program *</label>
+            <select class="form-control" id="u-dept">
+              <option value="">Select program...</option>
+              <option value="BSCS">Bachelor of Science in Computer Science (BSCS)</option>
+            </select>
           </div>
           <div class="form-group"><label>Designation</label>
             <input type="text" class="form-control" id="u-desig" placeholder="Instructor I">
