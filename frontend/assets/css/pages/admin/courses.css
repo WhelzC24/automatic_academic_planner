@@ -137,9 +137,9 @@
   overflow: hidden;
 }
 
-.grouped-courses-table th:nth-child(1) { width: 15%; }
-.grouped-courses-table th:nth-child(2) { width: 75%; }
-.grouped-courses-table th:nth-child(3) { width: 10%; }
+.grouped-courses-table th:nth-child(1) { width: auto; }
+.grouped-courses-table th:nth-child(2) { width: auto; }
+.grouped-courses-table th:nth-child(3) { width: auto; }
 
 .grouped-courses-table th {
   background: #e2e8f0;
