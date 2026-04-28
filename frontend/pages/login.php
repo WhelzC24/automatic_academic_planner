@@ -142,7 +142,10 @@
           <label>Program</label>
           <div class="input-wrap">
             <i class="fas fa-book"></i>
-            <input type="text" id="reg-program" class="form-control" placeholder="BS Computer Science">
+            <select id="reg-program" class="form-control">
+              <option value="">Select program...</option>
+              <option value="BSCS">Bachelor of Science in Computer Science (BSCS)</option>
+            </select>
           </div>
         </div>
         <div class="form-group">
