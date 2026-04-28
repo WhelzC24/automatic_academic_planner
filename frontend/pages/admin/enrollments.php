@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../backend/config/helpers.php';
 requireAuth('admin');
 require_once __DIR__ . '/../layout.php';
 $enrollmentsJsVersion = @filemtime(__DIR__ . '/../../assets/js/pages/admin/enrollments.js') ?: time();
+$enrollmentsCssVersion = @filemtime(__DIR__ . '/../../assets/css/pages/admin/enrollments.css') ?: time();
 layout_header('Enrollment Management', 'admin');
 ?>
 <div style="display:flex;min-height:100vh;">
@@ -109,7 +110,8 @@ layout_header('Enrollment Management', 'admin');
         </aside>
       </div>
 
-      <link rel="stylesheet" href="<?= APP_URL ?>/frontend/assets/css/pages/admin/enrollments.css">
+      <link rel="stylesheet" href="<?= APP_URL ?>/frontend/assets/css/pages/admin/enrollments.css?v=<?= $enrollmentsCssVersion ?>">
+
     </div>
   </div>
 </div>
