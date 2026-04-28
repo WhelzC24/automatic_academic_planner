@@ -137,20 +137,7 @@ switch ($action) {
         $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM notifications WHERE user_id=:uid AND read_at IS NULL");
         $stmt->execute([':uid' => $uid]);
         jsonResponse(true, 'OK', ['unread_notif' => (int)$stmt->fetch()['cnt']]);
-        break;
-
-    // ── TASKS ─────────────────────────────────────────────
-    // Tasks are auto-generated from assignments via cron jobs
-    case 'get_tasks':
-        syncAssignmentTasksForStudent($db, $uid);
-        $sql = "SELECT t.*, a.title as assignment_title
-                FROM tasks t LEFT JOIN assignments a ON a.assignment_id = t.assignment_id
-                WHERE t.user_id = :uid AND t.assignment_id IS NOT NULL
-                ORDER BY FIELD(t.priority,'Urgent','High','Medium','Low'), t.due_at";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([':uid' => $uid]);
-        jsonResponse(true, 'OK', ['tasks' => $stmt->fetchAll()]);
-        break;
+    break;
 
     case 'mark_task_status':
         $taskId = (int)($_POST['task_id'] ?? 0);
@@ -196,6 +183,7 @@ switch ($action) {
 
         $eventsStmt = $db->prepare(
             "SELECT schedule_id,
+                    created_by,
                     title,
                     description,
                     starts_at,
@@ -265,23 +253,134 @@ switch ($action) {
         jsonResponse(true, 'Schedule added successfully.');
         break;
 
+    case 'update_schedule':
+        $schedId = (int)($_POST['schedule_id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $desc = trim($_POST['description'] ?? '');
+        $startsAtInput = trim($_POST['starts_at'] ?? '');
+        $endsAtInput = trim($_POST['ends_at'] ?? '');
+        $type = trim($_POST['type'] ?? 'Personal');
+        $color = trim($_POST['color'] ?? '#4f46e5');
+
+        if (!$schedId || $title === '' || $startsAtInput === '' || $endsAtInput === '') {
+            jsonResponse(false, 'Title, start time, and end time are required.');
+        }
+
+        $own = $db->prepare("SELECT schedule_id FROM schedules WHERE schedule_id=:sid AND user_id=:uid LIMIT 1");
+        $own->execute([':sid' => $schedId, ':uid' => $uid]);
+        if (!$own->fetch()) jsonResponse(false, 'Unauthorized.');
+
+        $allowedTypes = ['Class', 'Study', 'Personal', 'Meeting'];
+        if (!in_array($type, $allowedTypes, true)) $type = 'Personal';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) $color = '#4f46e5';
+
+        $startsAtTs = strtotime($startsAtInput);
+        $endsAtTs = strtotime($endsAtInput);
+        if (!$startsAtTs || !$endsAtTs || $endsAtTs <= $startsAtTs) {
+            jsonResponse(false, 'End time must be later than start time.');
+        }
+
+        $db->prepare(
+            "UPDATE schedules SET title=:t, description=:d, starts_at=:s, ends_at=:e, type=:ty, color=:c WHERE schedule_id=:sid AND user_id=:uid"
+        )->execute([
+            ':t' => $title,
+            ':d' => $desc ?: null,
+            ':s' => date('Y-m-d H:i:s', $startsAtTs),
+            ':e' => date('Y-m-d H:i:s', $endsAtTs),
+            ':ty' => $type,
+            ':c' => $color,
+            ':sid' => $schedId,
+            ':uid' => $uid,
+        ]);
+        jsonResponse(true, 'Schedule updated.');
+        break;
+
+    case 'delete_schedule':
+        $schedId = (int)($_POST['schedule_id'] ?? 0);
+        if (!$schedId) jsonResponse(false, 'Invalid schedule ID.');
+
+        $own = $db->prepare("SELECT schedule_id, created_by FROM schedules WHERE schedule_id=:sid AND user_id=:uid LIMIT 1");
+        $own->execute([':sid' => $schedId, ':uid' => $uid]);
+        $sched = $own->fetch();
+        if (!$sched) jsonResponse(false, 'Unauthorized.');
+
+        // Block deletion of instructor-created schedules
+        if ($sched['created_by'] !== null && $sched['created_by'] != $uid) {
+            jsonResponse(false, 'This schedule was created by your instructor and cannot be deleted.');
+        }
+
+        $db->prepare("DELETE FROM schedules WHERE schedule_id=:sid AND user_id=:uid")->execute([':sid' => $schedId, ':uid' => $uid]);
+        jsonResponse(true, 'Schedule deleted.');
+        break;
+
     // Class schedules may be generated from course offerings
+
+    // ── CLEANUP EXPIRED INSTRUCTOR SCHEDULES ─────────────
+    case 'cleanup_expired_schedules':
+        // Find expired instructor-created schedules (ends_at < NOW())
+        $expired = $db->query(
+            "SELECT s.created_by, s.offering_id, s.title, s.starts_at, s.ends_at, s.type,
+                    GROUP_CONCAT(s.schedule_id) as schedule_ids
+             FROM schedules s
+             WHERE s.created_by IS NOT NULL 
+               AND s.ends_at < NOW()
+               AND s.type IN ('Exam','Activity','Quiz','Presentation','Meeting')
+             GROUP BY s.created_by, s.offering_id, s.title, s.starts_at, s.ends_at, s.type"
+        )->fetchAll();
+
+        $notifStmt = $db->prepare(
+            "INSERT INTO notifications (user_id, type, message)
+             VALUES (:uid, 'Schedule Reminder', :msg)"
+        );
+
+        $deleted = 0;
+        foreach ($expired as $ev) {
+            $scheduleIds = array_map('intval', explode(',', $ev['schedule_ids']));
+
+            // Notify instructor
+            $notifStmt->execute([
+                ':uid' => (int)$ev['created_by'],
+                ':msg' => "Your {$ev['type']} '{$ev['title']}' has ended."
+            ]);
+
+            // Notify students
+            $studentIds = $db->query(
+                "SELECT DISTINCT user_id FROM schedules WHERE schedule_id IN (" . implode(',', $scheduleIds) . ")"
+            )->fetchAll();
+            foreach ($studentIds as $row) {
+                $notifStmt->execute([
+                    ':uid' => (int)$row['user_id'],
+                    ':msg' => "The {$ev['type']} '{$ev['title']}' has ended."
+                ]);
+            }
+
+            // Delete all schedule rows for this event
+            $db->exec("DELETE FROM schedules WHERE schedule_id IN (" . implode(',', $scheduleIds) . ")");
+            $deleted += count($scheduleIds);
+        }
+
+        jsonResponse(true, "Cleaned up $deleted expired instructor schedules.");
+        break;
+
+
     // ── ASSIGNMENTS ────────────────────────────────────────
     case 'get_assignments':
         $stmt = $db->prepare(
             "SELECT a.*, c.title as course_title, c.code,
                     co.section, co.term,
                     u.first_name, u.last_name,
-                    sub.submission_id, sub.status as sub_status, sub.grade, sub.feedback, sub.submitted_at
+                    sub.submission_id, sub.status as sub_status, sub.grade, sub.feedback, sub.submitted_at,
+                    t.task_id, t.status as task_status, t.priority as task_priority
              FROM assignments a
              JOIN course_offerings co ON co.offering_id = a.offering_id
              JOIN courses c ON c.course_id = co.course_id
              JOIN enrollments e ON e.offering_id = co.offering_id AND e.student_id = :uid_enroll
              JOIN users u ON u.user_id = a.created_by
              LEFT JOIN submissions sub ON sub.assignment_id = a.assignment_id AND sub.student_id = :uid_sub
+             LEFT JOIN tasks t ON t.assignment_id = a.assignment_id AND t.user_id = :uid_task
              ORDER BY a.due_at"
         );
-        $stmt->execute([':uid_enroll' => $uid, ':uid_sub' => $uid]);
+        $stmt->execute([':uid_enroll' => $uid, ':uid_sub' => $uid, ':uid_task' => $uid]);
         jsonResponse(true, 'OK', ['assignments' => $stmt->fetchAll()]);
         break;
 
@@ -370,7 +469,7 @@ switch ($action) {
             ]);
         }
 
-        // Confirmation notification
+        // Confirmation notification for student
         $notif = $db->prepare(
             "INSERT INTO notifications (user_id, assignment_id, type, message)
              VALUES (:uid, :aid, 'Submission Confirmation', :msg)"
@@ -380,6 +479,27 @@ switch ($action) {
             ':aid' => $asgId,
             ':msg' => "Your submission for assignment ID $asgId has been received ($status)."
         ]);
+
+        // Notify instructor
+        $instmt = $db->prepare(
+            "SELECT ta.instructor_id FROM teaching_assignments ta 
+             JOIN course_offerings co ON co.offering_id = ta.offering_id 
+             JOIN assignments a ON a.offering_id = co.offering_id 
+             WHERE a.assignment_id = :aid"
+        );
+        $instmt->execute([':aid' => $asgId]);
+        $inst = $instmt->fetch();
+        if ($inst && !empty($inst['instructor_id'])) {
+            $db->prepare(
+                "INSERT INTO notifications (user_id, assignment_id, type, message)
+                 VALUES (:iid, :aid, 'Submission Confirmation', :imsg)"
+            )->execute([
+                ':iid' => $inst['instructor_id'],
+                ':aid' => $asgId,
+                ':imsg' => "Student " . $_SESSION['full_name'] . " submitted assignment ID $asgId ($status)."
+            ]);
+        }
+
         jsonResponse(true, 'Assignment submitted successfully.');
         break;
 

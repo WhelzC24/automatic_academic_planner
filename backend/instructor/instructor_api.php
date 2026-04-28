@@ -354,8 +354,8 @@ switch ($action) {
         $endsAt = date('Y-m-d H:i:s', $endsAtTs);
 
         $scheduleInsert = $db->prepare(
-            "INSERT INTO schedules (user_id, title, description, starts_at, ends_at, type, color)
-             VALUES (:uid, :title, :description, :starts_at, :ends_at, :type, :color)"
+            "INSERT INTO schedules (user_id, created_by, offering_id, title, description, starts_at, ends_at, type, color)
+             VALUES (:uid, :created_by, :offering_id, :title, :description, :starts_at, :ends_at, :type, :color)"
         );
         $notifInsert = $db->prepare(
             "INSERT INTO notifications (user_id, schedule_id, type, message)
@@ -366,6 +366,8 @@ switch ($action) {
         foreach ($students as $student) {
             $scheduleInsert->execute([
                 ':uid' => (int)$student['student_id'],
+                ':created_by' => $uid,
+                ':offering_id' => $offeringId,
                 ':title' => $title,
                 ':description' => $description !== '' ? $description : null,
                 ':starts_at' => $startsAt,
@@ -389,6 +391,9 @@ switch ($action) {
     case 'get_offering_events':
         $stmt = $db->prepare(
             "SELECT MIN(s.schedule_id) as schedule_id,
+                    GROUP_CONCAT(s.schedule_id) as schedule_ids,
+                    s.created_by,
+                    s.offering_id,
                     s.title,
                     s.description,
                     s.starts_at,
@@ -401,11 +406,167 @@ switch ($action) {
              JOIN course_offerings co ON co.offering_id = e.offering_id
              JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
              WHERE s.type IN ('Exam','Activity','Quiz','Presentation','Meeting')
-             GROUP BY s.title, s.description, s.starts_at, s.ends_at, s.type, s.color
+             GROUP BY s.title, s.description, s.starts_at, s.ends_at, s.type, s.color, s.created_by, s.offering_id
              ORDER BY s.starts_at DESC"
         );
         $stmt->execute([':uid' => $uid]);
-        jsonResponse(true, 'OK', ['events' => $stmt->fetchAll()]);
+        $events = $stmt->fetchAll();
+        foreach ($events as &$ev) {
+            $ev['schedule_ids'] = array_map('intval', explode(',', $ev['schedule_ids']));
+        }
+        jsonResponse(true, 'OK', ['events' => $events]);
+        break;
+
+    case 'get_single_event':
+        $eventId = (int)($_GET['event_id'] ?? 0);
+        if (!$eventId) jsonResponse(false, 'Invalid event ID.');
+
+        $stmt = $db->prepare(
+            "SELECT s.*
+             FROM schedules s
+             JOIN enrollments e ON e.student_id = s.user_id
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
+             WHERE s.schedule_id = :sid
+             LIMIT 1"
+        );
+        $stmt->execute([':uid' => $uid, ':sid' => $eventId]);
+        $event = $stmt->fetch();
+        if (!$event) jsonResponse(false, 'Event not found or unauthorized.');
+        jsonResponse(true, 'OK', ['event' => $event]);
+        break;
+
+    case 'update_event':
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        $title = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $startsAtInput = trim($_POST['starts_at'] ?? '');
+        $endsAtInput = trim($_POST['ends_at'] ?? '');
+        $type = trim($_POST['type'] ?? 'Exam');
+        $color = trim($_POST['color'] ?? '#1e3a5f');
+
+        if (!$eventId || $title === '' || $startsAtInput === '' || $endsAtInput === '') {
+            jsonResponse(false, 'Required fields missing.');
+        }
+
+        $validTypes = ['Exam', 'Activity', 'Quiz', 'Presentation', 'Meeting'];
+        if (!in_array($type, $validTypes, true)) $type = 'Exam';
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) $color = '#1e3a5f';
+
+        $startsAtTs = strtotime($startsAtInput);
+        $endsAtTs = strtotime($endsAtInput);
+        if (!$startsAtTs || !$endsAtTs || $endsAtTs <= $startsAtTs) {
+            jsonResponse(false, 'End time must be later than start time.');
+        }
+
+        $owning = $db->prepare(
+            "SELECT ta_id
+             FROM schedules s
+             JOIN enrollments e ON e.student_id = s.user_id
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
+             WHERE s.schedule_id = :sid
+             LIMIT 1"
+        );
+        $owning->execute([':uid' => $uid, ':sid' => $eventId]);
+        if (!$owning->fetch()) jsonResponse(false, 'Unauthorized.');
+
+        $startsAt = date('Y-m-d H:i:s', $startsAtTs);
+        $endsAt = date('Y-m-d H:i:s', $endsAtTs);
+
+        $db->prepare(
+            "UPDATE schedules
+             SET title=:t, description=:d, starts_at=:s, ends_at=:e, type=:ty, color=:c
+             WHERE schedule_id=:sid"
+        )->execute([
+            ':t' => $title,
+            ':d' => $description ?: null,
+            ':s' => $startsAt,
+            ':e' => $endsAt,
+            ':ty' => $type,
+            ':c' => $color,
+            ':sid' => $eventId,
+        ]);
+
+        // Update notifications for all schedule IDs in this event
+        $notifMsg = "$type updated: $title on " . date('M d, Y h:i A', $startsAtTs);
+        $notifStmt = $db->prepare(
+            "UPDATE notifications SET message=:msg WHERE schedule_id IN (
+                SELECT schedule_id FROM schedules 
+                WHERE created_by = :uid AND title = :title AND starts_at = :starts_at
+            )"
+        );
+        $notifStmt->execute([
+            ':msg' => $notifMsg,
+            ':uid' => $uid,
+            ':title' => $title,
+            ':starts_at' => $startsAt,
+        ]);
+
+        logAction('UPDATE_EVENT', "Updated schedule event ID $eventId ($title)");
+        jsonResponse(true, 'Event updated.');
+        break;
+
+    case 'delete_event':
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        if (!$eventId) jsonResponse(false, 'Invalid event ID.');
+
+        $owning = $db->prepare(
+            "SELECT ta_id
+             FROM schedules s
+             JOIN enrollments e ON e.student_id = s.user_id
+             JOIN course_offerings co ON co.offering_id = e.offering_id
+             JOIN teaching_assignments ta ON ta.offering_id = co.offering_id AND ta.instructor_id = :uid
+             WHERE s.schedule_id = :sid
+             LIMIT 1"
+        );
+        $owning->execute([':uid' => $uid, ':sid' => $eventId]);
+        if (!$owning->fetch()) jsonResponse(false, 'Unauthorized.');
+
+        $db->prepare("DELETE FROM notifications WHERE schedule_id = :sid")->execute([':sid' => $eventId]);
+        $db->prepare("DELETE FROM schedules WHERE schedule_id = :sid")->execute([':sid' => $eventId]);
+        logAction('DELETE_EVENT', "Deleted schedule event ID $eventId");
+        jsonResponse(true, 'Event deleted.');
+        break;
+
+// ── GET NOTIFICATIONS ────────────────────────────────
+    case 'get_notifications':
+        $stmt = $db->prepare(
+            "SELECT n.* FROM notifications n
+             WHERE n.user_id = :uid
+             ORDER BY n.sent_at DESC LIMIT 50"
+        );
+        $stmt->execute([':uid' => $uid]);
+        jsonResponse(true, 'OK', ['notifications' => $stmt->fetchAll()]);
+        break;
+
+    // ── MARK NOTIFICATION READ ────────────────────────────
+    case 'mark_notification_read':
+        $notifId = (int)($_POST['notification_id'] ?? 0);
+        if (!$notifId) jsonResponse(false, 'Invalid notification ID.');
+
+        $own = $db->prepare("SELECT notification_id FROM notifications WHERE notification_id = :nid AND user_id = :uid");
+        $own->execute([':nid' => $notifId, ':uid' => $uid]);
+        if (!$own->fetch()) jsonResponse(false, 'Unauthorized.');
+
+        $db->prepare("UPDATE notifications SET read_at = NOW() WHERE notification_id = :nid")
+           ->execute([':nid' => $notifId]);
+        jsonResponse(true, 'Notification marked as read.');
+        break;
+
+    // ── MARK ALL READ ─────────────────────────────────────
+    case 'mark_all_read':
+        $db->prepare("UPDATE notifications SET read_at = NOW() WHERE user_id = :uid AND read_at IS NULL")
+           ->execute([':uid' => $uid]);
+        jsonResponse(true, 'All notifications marked as read.');
+        break;
+
+    // ── GET UNREAD COUNT ──────────────────────────────────
+    case 'get_unread_notif_count':
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM notifications WHERE user_id = :uid AND read_at IS NULL");
+        $stmt->execute([':uid' => $uid]);
+        $row = $stmt->fetch();
+        jsonResponse(true, 'OK', ['unread_notif' => (int)$row['cnt']]);
         break;
 
     default:

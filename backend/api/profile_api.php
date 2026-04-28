@@ -17,20 +17,69 @@ switch ($action) {
 
     // ── GET PROFILE ────────────────────────────────────────
     case 'get_profile':
-        $stmt = $db->prepare(
-            "SELECT u.user_id, u.username, u.email, u.first_name, u.last_name,
-                    u.phone, u.role, u.created_at,
-                    s.student_number, s.program, s.year_level, s.gpa,
-                    i.department, i.designation, i.office_location
-             FROM users u
-             LEFT JOIN students s ON s.user_id = u.user_id
-             LEFT JOIN instructors i ON i.user_id = u.user_id
-             WHERE u.user_id = :id"
+        $profile = [
+            'user_id' => $uid,
+            'username' => $_SESSION['username'],
+            'email' => '',
+            'first_name' => '',
+            'last_name' => '',
+            'phone' => '',
+            'role' => $role,
+            'created_at' => '',
+            'student_number' => '',
+            'program' => '',
+            'year_level' => 1,
+            'gpa' => null,
+            'department' => '',
+            'designation' => '',
+            'office_location' => '',
+            'blocks' => []
+        ];
+
+        $userStmt = $db->prepare(
+            "SELECT username, email, first_name, last_name, phone, role, created_at FROM users WHERE user_id = :id"
         );
-        $stmt->execute([':id' => $uid]);
-        $profile = $stmt->fetch();
-        if (!$profile) jsonResponse(false, 'User not found.');
-        unset($profile['password_hash']);
+        $userStmt->execute([':id' => $uid]);
+        $userRow = $userStmt->fetch();
+        if ($userRow) {
+            $profile = array_merge($profile, $userRow);
+        }
+
+        if ($role === 'student') {
+            $studStmt = $db->prepare("SELECT student_number, program, year_level, gpa FROM students WHERE user_id = :id");
+            $studStmt->execute([':id' => $uid]);
+            $studRow = $studStmt->fetch();
+            if ($studRow) {
+                $profile = array_merge($profile, $studRow);
+            }
+
+            $blocksStmt = $db->query(
+                "SELECT DISTINCT co.section 
+                 FROM enrollments e 
+                 JOIN course_offerings co ON co.offering_id = e.offering_id 
+                 WHERE e.student_id = $uid 
+                 ORDER BY co.section"
+            );
+            $profile['blocks'] = array_column($blocksStmt->fetchAll(), 'section');
+
+            $coursesStmt = $db->query(
+                "SELECT c.code, c.title, co.section, co.term, co.schedule
+                 FROM enrollments e
+                 JOIN course_offerings co ON co.offering_id = e.offering_id
+                 JOIN courses c ON c.course_id = co.course_id
+                 WHERE e.student_id = $uid
+                 ORDER BY c.code"
+            );
+            $profile['enrolled_courses'] = $coursesStmt->fetchAll();
+        } elseif ($role === 'instructor') {
+            $instStmt = $db->prepare("SELECT department, designation, office_location FROM instructors WHERE user_id = :id");
+            $instStmt->execute([':id' => $uid]);
+            $instRow = $instStmt->fetch();
+            if ($instRow) {
+                $profile = array_merge($profile, $instRow);
+            }
+        }
+
         jsonResponse(true, 'OK', ['profile' => $profile]);
         break;
 

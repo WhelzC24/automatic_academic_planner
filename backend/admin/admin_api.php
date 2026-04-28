@@ -200,21 +200,27 @@ switch ($action) {
         $courses = $db->query(
             "SELECT c.*, COUNT(co.offering_id) as offering_count
              FROM courses c LEFT JOIN course_offerings co ON co.course_id = c.course_id
-             GROUP BY c.course_id ORDER BY c.code"
+             GROUP BY c.course_id ORDER BY c.year_level, c.semester, c.code"
         )->fetchAll();
         jsonResponse(true, 'OK', ['courses' => $courses]);
         break;
 
     case 'add_course':
-        $code  = strtoupper(trim($_POST['code'] ?? ''));
-        $title = trim($_POST['title'] ?? '');
-        $desc  = trim($_POST['description'] ?? '');
-        $units = (int)($_POST['units'] ?? 3);
+        $code     = strtoupper(trim($_POST['code'] ?? ''));
+        $title    = trim($_POST['title'] ?? '');
+        $desc     = trim($_POST['description'] ?? '');
+        $units    = (int)($_POST['units'] ?? 3);
+        $yearLevel = (int)($_POST['year_level'] ?? 1);
+        $semester = trim($_POST['semester'] ?? '1st Semester');
         if (!$code || !$title) jsonResponse(false, 'Code and title are required.');
         if ($units < 1 || $units > 6) jsonResponse(false, 'Units must be between 1 and 6.');
+        if ($yearLevel < 1 || $yearLevel > 4) jsonResponse(false, 'Year level must be 1-4.');
+        if (!in_array($semester, ['1st Semester', '2nd Semester', 'Summer'])) {
+            jsonResponse(false, 'Invalid semester.');
+        }
         try {
-            $db->prepare("INSERT INTO courses (code,title,description,units) VALUES(:c,:t,:d,:u)")
-                ->execute([':c' => $code, ':t' => $title, ':d' => $desc, ':u' => $units]);
+            $db->prepare("INSERT INTO courses (code,title,description,units,year_level,semester) VALUES(:c,:t,:d,:u,:y,:s)")
+                ->execute([':c' => $code, ':t' => $title, ':d' => $desc, ':u' => $units, ':y' => $yearLevel, ':s' => $semester]);
             jsonResponse(true, 'Course added.', ['course_id' => $db->lastInsertId()]);
         } catch (Exception $e) {
             jsonResponse(false, 'Course code already exists.');
@@ -222,15 +228,21 @@ switch ($action) {
         break;
 
     case 'update_course':
-        $courseId = (int)($_POST['course_id'] ?? 0);
+        $courseId  = (int)($_POST['course_id'] ?? 0);
         $code     = strtoupper(trim($_POST['code'] ?? ''));
         $title    = trim($_POST['title'] ?? '');
         $desc     = trim($_POST['description'] ?? '');
         $units    = (int)($_POST['units'] ?? 3);
+        $yearLevel = (int)($_POST['year_level'] ?? 1);
+        $semester = trim($_POST['semester'] ?? '1st Semester');
 
         if (!$courseId) jsonResponse(false, 'Invalid course ID.');
         if (!$code || !$title) jsonResponse(false, 'Code and title are required.');
         if ($units < 1 || $units > 6) jsonResponse(false, 'Units must be between 1 and 6.');
+        if ($yearLevel < 1 || $yearLevel > 4) jsonResponse(false, 'Year level must be 1-4.');
+        if (!in_array($semester, ['1st Semester', '2nd Semester', 'Summer'])) {
+            jsonResponse(false, 'Invalid semester.');
+        }
 
         $exists = $db->prepare("SELECT course_id FROM courses WHERE course_id = :id LIMIT 1");
         $exists->execute([':id' => $courseId]);
@@ -239,13 +251,15 @@ switch ($action) {
         try {
             $db->prepare(
                 "UPDATE courses
-                 SET code = :c, title = :t, description = :d, units = :u
+                 SET code = :c, title = :t, description = :d, units = :u, year_level = :y, semester = :s
                  WHERE course_id = :id"
             )->execute([
                 ':c' => $code,
                 ':t' => $title,
                 ':d' => $desc,
                 ':u' => $units,
+                ':y' => $yearLevel,
+                ':s' => $semester,
                 ':id' => $courseId,
             ]);
             logAction('UPDATE_COURSE', "Updated course ID $courseId ($code)");
@@ -255,16 +269,18 @@ switch ($action) {
         }
         break;
 
-    case 'add_offering':
+case 'add_offering':
         $courseId  = (int)($_POST['course_id'] ?? 0);
         $term      = trim($_POST['term'] ?? '');
         $section   = trim($_POST['section'] ?? '');
         $schedule  = trim($_POST['schedule'] ?? '');
+        $timeStart = trim($_POST['time_start'] ?? '');
+        $timeEnd   = trim($_POST['time_end'] ?? '');
         $room      = trim($_POST['room'] ?? '');
         $instrId   = (int)($_POST['instructor_id'] ?? 0);
         if (!$courseId || !$term || !$section) jsonResponse(false, 'Required fields missing.');
-        $db->prepare("INSERT INTO course_offerings (course_id,term,section,schedule,room) VALUES(:cid,:t,:s,:sch,:r)")
-            ->execute([':cid' => $courseId, ':t' => $term, ':s' => $section, ':sch' => $schedule, ':r' => $room]);
+        $db->prepare("INSERT INTO course_offerings (course_id,term,section,schedule,time_start,time_end,room) VALUES(:cid,:t,:s,:sch,:ts,:te,:r)")
+            ->execute([':cid' => $courseId, ':t' => $term, ':s' => $section, ':sch' => $schedule, ':ts' => $timeStart, ':te' => $timeEnd, ':r' => $room]);
         $offeringId = $db->lastInsertId();
         if ($instrId) {
             $db->prepare("INSERT INTO teaching_assignments (offering_id,instructor_id) VALUES(:oid,:iid)")
@@ -273,12 +289,14 @@ switch ($action) {
         jsonResponse(true, 'Course offering created.', ['offering_id' => $offeringId]);
         break;
 
-    case 'update_offering':
+case 'update_offering':
         $offeringId = (int)($_POST['offering_id'] ?? 0);
         $courseId   = (int)($_POST['course_id'] ?? 0);
         $term       = trim($_POST['term'] ?? '');
         $section    = trim($_POST['section'] ?? '');
         $schedule   = trim($_POST['schedule'] ?? '');
+        $timeStart  = trim($_POST['time_start'] ?? '');
+        $timeEnd    = trim($_POST['time_end'] ?? '');
         $room       = trim($_POST['room'] ?? '');
         $instrId    = (int)($_POST['instructor_id'] ?? 0);
 
@@ -303,6 +321,8 @@ switch ($action) {
                      term = :t,
                      section = :s,
                      schedule = :sch,
+                     time_start = :ts,
+                     time_end = :te,
                      room = :r
                  WHERE offering_id = :oid"
             )->execute([
@@ -310,6 +330,8 @@ switch ($action) {
                 ':t' => $term,
                 ':s' => $section,
                 ':sch' => $schedule,
+                ':ts' => $timeStart,
+                ':te' => $timeEnd,
                 ':r' => $room,
                 ':oid' => $offeringId,
             ]);
@@ -322,7 +344,7 @@ switch ($action) {
             }
 
             $db->commit();
-            logAction('UPDATE_OFFERING', "Updated offering ID $offeringId");
+            logAction('update_offering', "Updated offering ID $offeringId");
             jsonResponse(true, 'Offering updated successfully.');
         } catch (Exception $e) {
             $db->rollBack();
@@ -375,7 +397,7 @@ switch ($action) {
 
     case 'get_offering_list':
         $offerings = $db->query(
-            "SELECT co.offering_id, co.course_id, co.term, co.section, co.schedule, co.room,
+            "SELECT co.offering_id, co.course_id, co.term, co.section, co.schedule, co.time_start, co.time_end, co.room,
                     c.code, c.title,
                     ta.instructor_id,
                     u.first_name, u.last_name,
